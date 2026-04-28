@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  min-height: 100vh;
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply min-h-screen bg-page font-sans text-text-primary antialiased;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-black ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer utilities {
+  .tap-highlight-transparent {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
