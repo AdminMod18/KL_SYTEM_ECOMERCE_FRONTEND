@@ -2,7 +2,7 @@
  * Copy y taxonomía alineados al prototipo Figma Make:
  * https://foil-peanut-77989849.figma.site/
  */
-export const SITE_NAME = 'Market';
+export const SITE_NAME = 'Mercado';
 
 export const HERO = {
   eyebrow: 'Introducing our Premium Collection',
@@ -66,6 +66,40 @@ export const TRUST_SECTION = {
 };
 
 /** Pie multipilar tipo Figma (Shop / Company / Support) */
+/** Preguntas frecuentes genéricas en ficha de producto (HU-17). */
+export const PRODUCTO_FAQ_ITEMS = [
+  {
+    q: '¿El envío está incluido?',
+    a: 'Los costos de envío se calculan en el checkout según ciudad y peso. Puede revisar el desglose antes de pagar.',
+  },
+  {
+    q: '¿Hay garantía?',
+    a: 'Las condiciones de garantía dependen del vendedor y del tipo de producto. Consulte la descripción o pregunte antes de comprar.',
+  },
+  {
+    q: '¿Puedo devolver el producto?',
+    a: 'Las políticas de cambios y devoluciones aplican según reglas del marketplace y del vendedor. Guarde comprobante de compra.',
+  },
+  {
+    q: '¿Cómo contacto al vendedor?',
+    a: 'Use la sección de preguntas en esta misma página; el vendedor puede responder públicamente cuando esté disponible.',
+  },
+];
+
+/** Enlaces HU-03 — formatos descargables (HTML imprimible en /public/formatos). */
+export const FORMATOS_LEGALES_VENDEDOR = [
+  {
+    href: '/formatos/centrales-riesgo.html',
+    label: 'Autorización centrales de riesgo',
+    description: 'Plantilla para imprimir o guardar como PDF desde el navegador.',
+  },
+  {
+    href: '/formatos/datos-personales.html',
+    label: 'Tratamiento de datos personales',
+    description: 'Adhesión informada al tratamiento de datos (caso estudio).',
+  },
+];
+
 export const FOOTER_NAV = {
   tagline: 'Premium technology marketplace — curated devices and accessories.',
   columns: [
@@ -79,7 +113,7 @@ export const FOOTER_NAV = {
     },
     {
       title: 'Company',
-      links: [{ label: 'Seller', to: '/seller' }],
+      links: [{ label: 'Seller', to: '/become-seller' }],
     },
     {
       title: 'Support',

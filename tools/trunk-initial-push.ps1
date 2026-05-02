@@ -52,7 +52,7 @@ function Commit-Staged {
 $steps = @(
     @{ Paths = @(".gitignore", "package.json", "package-lock.json", "vite.config.js", "tailwind.config.js", "postcss.config.js", "index.html", ".env.example", "tools\trunk-initial-push.ps1"); Message = "chore: proyecto Vite + React + Tailwind y script de push trunk" },
     @{ Paths = @("src/main.jsx", "src/index.css", "src/App.jsx"); Message = "feat(ui): punto de entrada, estilos globales y enrutado principal" },
-    @{ Paths = @("src/components/Layout.jsx", "src/api/client.js", "src/context/CartContext.jsx"); Message = "feat(ui): layout, cliente HTTP y contexto de carrito" },
+    @{ Paths = @("src/components/Layout.jsx", "src/api/apiClient.js", "src/context/CartContext.jsx"); Message = "feat(ui): layout, cliente HTTP y contexto de carrito" },
     @{ Paths = @("src/pages/Catalogo.jsx"); Message = "feat(pages): catálogo de productos" },
     @{ Paths = @("src/pages/Carrito.jsx", "src/pages/Checkout.jsx"); Message = "feat(pages): carrito y checkout" },
     @{ Paths = @("src/pages/Login.jsx", "src/pages/Registro.jsx"); Message = "feat(pages): login y registro" }

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api/client.js';
+import { createUsuario } from '../services/userService.js';
 import { SITE_NAME } from '../data/marketplaceContent.js';
+import { getRequestErrorMessage } from '../utils/apiError.js';
 
 const inputClass =
   'mt-2 w-full rounded-full border-0 bg-search-field px-5 py-3 text-sm text-text-primary placeholder:text-text-muted shadow-inner ring-1 ring-inset ring-black/[0.06] focus:outline-none focus:ring-2 focus:ring-cart-badge/35';
@@ -10,30 +11,60 @@ export function Registro() {
   const navigate = useNavigate();
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [email, setEmail] = useState('');
-  const [nombreCompleto, setNombreCompleto] = useState('');
+  const [nombres, setNombres] = useState('');
+  const [apellidos, setApellidos] = useState('');
+  const [direccionResidencia, setDireccionResidencia] = useState('');
+  const [redSocialTwitter, setRedSocialTwitter] = useState('');
+  const [redSocialInstagram, setRedSocialInstagram] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [paisResidencia, setPaisResidencia] = useState('Colombia');
+  const [ciudadResidencia, setCiudadResidencia] = useState('');
+  const [documentoIdentidad, setDocumentoIdentidad] = useState('');
+  const [tipoPersona, setTipoPersona] = useState('NATURAL');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
     setError('');
+    const passwordTrim = password.trim();
+    if (!passwordTrim) {
+      setError('La contraseña es obligatoria.');
+      return;
+    }
+    const nom = nombres.trim();
+    const ape = apellidos.trim();
+    if (!nom || !ape) {
+      setError('Nombres y apellidos son obligatorios (caso estudio — comprador).');
+      return;
+    }
+    const doc = documentoIdentidad.trim();
+    if (doc.length < 5 || doc.length > 32) {
+      setError('Documento de identificación obligatorio: entre 5 y 32 caracteres.');
+      return;
+    }
     setLoading(true);
     try {
-      await api.post('/usuarios', {
+      await createUsuario({
         nombreUsuario,
         email,
-        nombreCompleto,
+        password: passwordTrim,
+        nombreCompleto: `${nom} ${ape}`.trim(),
+        nombres: nom,
+        apellidos: ape,
+        direccionResidencia: direccionResidencia.trim() || undefined,
+        redSocialTwitter: redSocialTwitter.trim() || undefined,
+        redSocialInstagram: redSocialInstagram.trim() || undefined,
+        telefono: telefono.trim() || undefined,
+        paisResidencia: paisResidencia.trim() || undefined,
+        ciudadResidencia: ciudadResidencia.trim() || undefined,
+        documentoIdentidad: doc,
+        tipoPersona,
       });
       navigate('/login');
     } catch (err) {
-      const body = err.response?.data;
-      const campos = body?.properties?.campos ?? body?.campos;
-      const msg =
-        body?.detail ??
-        body?.title ??
-        (campos ? JSON.stringify(campos) : err.message) ??
-        'Registration failed.';
-      setError(String(msg));
+      setError(getRequestErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -76,8 +107,86 @@ export function Registro() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-primary">Full name</label>
-            <input className={inputClass} value={nombreCompleto} onChange={(e) => setNombreCompleto(e.target.value)} required />
+            <label className="text-sm font-medium text-text-primary">Password</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              className={inputClass}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-text-primary">Nombres</label>
+              <input className={inputClass} value={nombres} onChange={(e) => setNombres(e.target.value)} required />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-text-primary">Apellidos</label>
+              <input className={inputClass} value={apellidos} onChange={(e) => setApellidos(e.target.value)} required />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-text-primary">Dirección de residencia</label>
+            <input
+              className={inputClass}
+              value={direccionResidencia}
+              onChange={(e) => setDireccionResidencia(e.target.value)}
+              placeholder="Calle, número, barrio"
+            />
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-text-primary">Twitter</label>
+              <input className={inputClass} value={redSocialTwitter} onChange={(e) => setRedSocialTwitter(e.target.value)} placeholder="@usuario" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-text-primary">Instagram</label>
+              <input className={inputClass} value={redSocialInstagram} onChange={(e) => setRedSocialInstagram(e.target.value)} placeholder="@usuario" />
+            </div>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-text-primary">Teléfono</label>
+              <input
+                className={inputClass}
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="+57 300 0000000"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-text-primary">Tipo de persona</label>
+              <select
+                className={`${inputClass} appearance-none`}
+                value={tipoPersona}
+                onChange={(e) => setTipoPersona(e.target.value)}
+              >
+                <option value="NATURAL">Natural</option>
+                <option value="JURIDICA">Jurídica</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-text-primary">País</label>
+              <input className={inputClass} value={paisResidencia} onChange={(e) => setPaisResidencia(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-text-primary">Ciudad</label>
+              <input className={inputClass} value={ciudadResidencia} onChange={(e) => setCiudadResidencia(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-text-primary">Documento de identidad (cédula o NIT)</label>
+            <input
+              className={inputClass}
+              value={documentoIdentidad}
+              onChange={(e) => setDocumentoIdentidad(e.target.value)}
+              maxLength={32}
+              minLength={5}
+              required
+              placeholder="Entre 5 y 32 caracteres"
+            />
           </div>
           <button
             type="submit"

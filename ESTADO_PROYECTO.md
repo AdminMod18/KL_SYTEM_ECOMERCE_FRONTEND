@@ -21,11 +21,11 @@ Este documento resume el avance del **frontend** (este repositorio) y del **back
 | **Panel vendedor** (`/seller`) | UI mock | Datos estáticos; mensaje indica conectar APIs cuando estén listas |
 | **Mis pedidos / cuenta** | No implementado | No hay rutas equivalentes al prototipo “Mis pedidos” aún |
 
-### Integración API actual (`src/api/client.js`)
+### Integración API actual (`src/api/apiClient.js` + `src/services/*`)
 
 | Operación | Endpoint usado | Observación |
 |-----------|----------------|-------------|
-| Listar productos | `GET /productos` | Fallback a datos mock si falla la red |
+| Listar productos | `GET /productos` | Errores mostrados en UI; sin datos mock |
 | Login | `POST /auth/login` | Guarda `accessToken` y `roles` |
 | Registro usuario | `POST /usuarios` | Redirige a login |
 | Crear orden | `POST /orden` | Tras checkout |

@@ -20,7 +20,11 @@ export function CartItem({ item, onQtyChange, onRemove }) {
             type="number"
             min={1}
             value={item.cantidad}
-            onChange={(e) => onQtyChange(item.id, Number(e.target.value))}
+            onChange={(e) => {
+              const raw = Number(e.target.value);
+              const q = Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
+              onQtyChange(item.id, q);
+            }}
             className="w-20 rounded-xl border border-border-strong bg-page px-2 py-1.5 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
           />
         </label>

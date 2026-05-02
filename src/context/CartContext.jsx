@@ -6,14 +6,19 @@ export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
 
   const addItem = useCallback((product) => {
+    const sku = product.sku?.trim() || `SKU-${product.id}`;
+    const line = { ...product, sku, cantidad: 1 };
     setItems((prev) => {
       const idx = prev.findIndex((p) => p.id === product.id);
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = { ...copy[idx], cantidad: copy[idx].cantidad + 1 };
+        copy[idx] = {
+          ...copy[idx],
+          cantidad: Math.max(1, Math.floor(Number(copy[idx].cantidad) || 1) + 1),
+        };
         return copy;
       }
-      return [...prev, { ...product, cantidad: 1 }];
+      return [...prev, line];
     });
   }, []);
 
@@ -22,9 +27,8 @@ export function CartProvider({ children }) {
   }, []);
 
   const updateQty = useCallback((id, cantidad) => {
-    setItems((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, cantidad: Math.max(1, cantidad) } : p)),
-    );
+    const q = Math.max(1, Math.floor(Number(cantidad)) || 1);
+    setItems((prev) => prev.map((p) => (p.id === id ? { ...p, cantidad: q } : p)));
   }, []);
 
   const clear = useCallback(() => setItems([]), []);

@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api/client.js';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { login as loginRequest } from '../services/authService.js';
 import { SITE_NAME } from '../data/marketplaceContent.js';
+import { getRequestErrorMessage } from '../utils/apiError.js';
 
 const inputClass =
   'mt-2 w-full rounded-full border-0 bg-search-field px-5 py-3 text-sm text-text-primary placeholder:text-text-muted shadow-inner ring-1 ring-inset ring-black/[0.06] focus:outline-none focus:ring-2 focus:ring-cart-badge/35';
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,20 +20,18 @@ export function Login() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/login', { username, password });
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('roles', JSON.stringify(data.roles ?? []));
-      if (!remember) {
-        sessionStorage.setItem('accessToken', data.accessToken);
+      await loginRequest({ username, password });
+      const from = location.state?.from;
+      let target = '/cuenta';
+      if (from && typeof from.pathname === 'string') {
+        const p = from.pathname;
+        if (p && p !== '/login' && p !== '/register') {
+          target = `${p}${from.search ?? ''}${from.hash ?? ''}`;
+        }
       }
-      navigate('/catalog');
+      navigate(target, { replace: true });
     } catch (err) {
-      const msg =
-        err.response?.data?.detail ??
-        err.response?.data?.title ??
-        err.message ??
-        'Could not sign in.';
-      setError(String(msg));
+      setError(getRequestErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -82,20 +81,6 @@ export function Login() {
               autoComplete="current-password"
               required
             />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-            <label className="flex cursor-pointer items-center gap-2 text-text-secondary">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="rounded border-border-strong bg-search-field text-cart-badge focus:ring-cart-badge/40"
-              />
-              Remember me
-            </label>
-            <button type="button" className="font-medium text-cart-badge transition hover:underline">
-              Forgot password?
-            </button>
           </div>
           <button
             type="submit"

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Formato — Tratamiento de datos personales (demo caso estudio)</title>
+  <style>
+    body { font-family: system-ui, Segoe UI, Roboto, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #111; line-height: 1.6; }
+    h1 { font-size: 1.25rem; border-bottom: 2px solid #111; padding-bottom: 0.5rem; }
+    .muted { color: #555; font-size: 0.9rem; }
+    .box { border: 1px solid #ccc; padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+    ul { padding-left: 1.2rem; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <p class="no-print muted">Plantilla educativa Konrad / Marketplace — imprimir o guardar como PDF desde el navegador (Ctrl+P).</p>
+  <h1>Política de tratamiento de datos personales — adhesión del titular</h1>
+  <p class="muted">Referencia para el caso de estudio. Debe alinearse con la política corporativa y la ley aplicable (p. ej. Ley 1581 de 2012 en Colombia).</p>
+  <div class="box">
+    <p><strong>Titular:</strong> _____________________________________________</p>
+    <p><strong>Documento:</strong> ____________________________________________</p>
+    <p><strong>Correo:</strong> ______________________________________________</p>
+    <p style="margin-top:1rem;">Declaro que he sido informado(a) de manera clara sobre:</p>
+    <ul>
+      <li>La identidad del responsable del tratamiento y sus datos de contacto.</li>
+      <li>Las finalidades del tratamiento (evaluación de perfil de vendedor, cumplimiento legal, gestión contractual).</li>
+      <li>Mis derechos de acceso, rectificación, actualización, supresión y revocatoria del consentimiento.</li>
+    </ul>
+    <p style="margin-top:1rem;">
+      <strong>Consentimiento:</strong> Acepto el tratamiento de mis datos personales para las finalidades descritas en la política de privacidad del marketplace.
+    </p>
+    <p style="margin-top:1rem;"><strong>Firma:</strong> ________________________________ · <strong>Fecha:</strong> ____ / ____ / ________</p>
+  </div>
+  <button type="button" class="no-print" onclick="window.print()">Imprimir / Guardar como PDF</button>
+</body>
+</html>

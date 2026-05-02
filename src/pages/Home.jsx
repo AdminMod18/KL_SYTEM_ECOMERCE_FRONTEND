@@ -8,13 +8,26 @@ import { useProductos } from '../hooks/useProductos.js';
 import { useCart } from '../context/CartContext.jsx';
 
 export function Home() {
-  const { productos, loading } = useProductos();
+  const { productos, loading, error, reload } = useProductos();
   const { addItem } = useCart();
   const featured = productos.slice(0, 6);
 
   return (
     <div className="space-y-20 sm:space-y-28">
       <HeroSection />
+
+      {error ? (
+        <div className="mx-auto max-w-wide rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-text-primary">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => reload()}
+            className="mt-2 text-sm font-semibold text-cart-badge underline hover:no-underline"
+          >
+            Reintentar
+          </button>
+        </div>
+      ) : null}
 
       <section>
         <div className="mx-auto max-w-content text-center">
@@ -46,13 +59,20 @@ export function Home() {
           </Link>
         </div>
         {loading ? (
-          <p className="mt-12 text-center text-sm text-text-muted">Loading products…</p>
-        ) : (
+          <p className="mt-12 text-center text-sm text-text-muted">Cargando productos…</p>
+        ) : featured.length ? (
           <div className="mx-auto mt-12 grid max-w-wide gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((p) => (
               <ProductCard key={p.id} product={p} onAddToCart={addItem} />
             ))}
           </div>
+        ) : (
+          <p className="mt-12 text-center text-sm text-text-muted">
+            No hay productos destacados.{' '}
+            <Link to="/catalog" className="font-semibold text-cart-badge hover:underline">
+              Ver catálogo
+            </Link>
+          </p>
         )}
       </section>
 
