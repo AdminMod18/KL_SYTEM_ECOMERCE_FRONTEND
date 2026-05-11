@@ -90,13 +90,13 @@ export const PRODUCTO_FAQ_ITEMS = [
 export const FORMATOS_LEGALES_VENDEDOR = [
   {
     href: '/formatos/centrales-riesgo.html',
-    label: 'Autorización centrales de riesgo',
-    description: 'Plantilla para imprimir o guardar como PDF desde el navegador.',
+    label: 'Formato de aceptación de consulta a centrales de riesgo',
+    description: 'Abrir, completar e imprimir o guardar como PDF desde el navegador (misma página de registro).',
   },
   {
     href: '/formatos/datos-personales.html',
-    label: 'Tratamiento de datos personales',
-    description: 'Adhesión informada al tratamiento de datos (caso estudio).',
+    label: 'Formato de aceptación de tratamiento de datos personales',
+    description: 'Abrir, completar e imprimir o guardar como PDF desde el navegador (misma página de registro).',
   },
 ];
 

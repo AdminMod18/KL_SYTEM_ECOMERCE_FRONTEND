@@ -52,7 +52,7 @@ export async function getSolicitud(id, config) {
  * }} payload
  */
 export async function createSolicitud(payload) {
-  const { data } = await apiClient.post('/solicitudes', payload);
+  const { data } = await apiClient.post('/solicitudes', payload, { timeout: 120000 });
   return data;
 }
 

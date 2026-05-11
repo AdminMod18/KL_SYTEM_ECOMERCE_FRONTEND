@@ -16,20 +16,88 @@ import {
   setSellerSolicitudIdSession,
 } from '../auth/sellerSession.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
+import { compressImageToDataUrl } from '../utils/compressImageToDataUrl.js';
+import { fileToBase64String } from '../utils/fileToBase64String.js';
+import { parseImagenesUrlsCadena } from '../utils/imagenesUrls.js';
+import {
+  validarCamposActivacionPorTipo,
+  validarCamposSolicitudVendedor,
+  validarDocumentoCoincideSolicitud,
+  validarFormularioProductoVendedor,
+  validarMontoActivacion,
+  validarScoreCifin,
+} from '../utils/sellerFormValidators.js';
 
-/** Metadatos de adjuntos exigidos por la cadena de validación (demo: sin Base64). */
-const ADJUNTOS_NATURAL = [
-  { tipo: 'CEDULA', nombreArchivo: 'cedula.pdf' },
-  { tipo: 'ACEPTACION_CENTRALES_RIESGO', nombreArchivo: 'centrales-riesgo.pdf' },
-  { tipo: 'ACEPTACION_DATOS_PERSONALES', nombreArchivo: 'datos-personales.pdf' },
+/** Límite por archivo (PDF o imagen); el cuerpo JSON crece ~4/3 por Base64. */
+const MAX_BYTES_ADJUNTO = 3 * 1024 * 1024;
+const MIME_ADJUNTO_PERMITIDO = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+
+function sanitizeNombreArchivo(name, fallback) {
+  let n = (name || '').trim() || fallback;
+  n = n.replace(/[/\\:*?"<>|]/g, '_');
+  if (n.length > 260) n = n.slice(0, 260);
+  return n || fallback;
+}
+
+function adjuntoArchivoTipoPermitido(file) {
+  if (MIME_ADJUNTO_PERMITIDO.has(file.type)) return true;
+  const n = (file.name || '').toLowerCase();
+  return /\.(pdf|jpe?g|png|webp)$/i.test(n);
+}
+
+/**
+ * Definición única de adjuntos por tipo de persona (etiquetas legales + payload API).
+ */
+const DEF_ADJUNTOS_NATURAL = [
+  {
+    tipo: 'CEDULA',
+    nombreArchivo: 'cedula.pdf',
+    label: 'Fotocopia de la cédula',
+    plantillaHref: null,
+  },
+  {
+    tipo: 'ACEPTACION_CENTRALES_RIESGO',
+    nombreArchivo: 'centrales-riesgo.pdf',
+    label: 'Formato de aceptación de consulta a centrales de riesgo',
+    plantillaHref: '/formatos/centrales-riesgo.html',
+  },
+  {
+    tipo: 'ACEPTACION_DATOS_PERSONALES',
+    nombreArchivo: 'datos-personales.pdf',
+    label: 'Formato de aceptación de tratamiento de datos personales',
+    plantillaHref: '/formatos/datos-personales.html',
+  },
 ];
 
-const ADJUNTOS_JURIDICA = [
-  { tipo: 'RUT', nombreArchivo: 'rut.pdf' },
-  { tipo: 'CAMARA_COMERCIO', nombreArchivo: 'camara-comercio.pdf' },
-  { tipo: 'ACEPTACION_CENTRALES_RIESGO', nombreArchivo: 'centrales-riesgo.pdf' },
-  { tipo: 'ACEPTACION_DATOS_PERSONALES', nombreArchivo: 'datos-personales.pdf' },
+const DEF_ADJUNTOS_JURIDICA = [
+  {
+    tipo: 'RUT',
+    nombreArchivo: 'rut.pdf',
+    label: 'RUT',
+    plantillaHref: null,
+  },
+  {
+    tipo: 'CAMARA_COMERCIO',
+    nombreArchivo: 'camara-comercio.pdf',
+    label: 'Cámara de comercio',
+    plantillaHref: null,
+  },
+  {
+    tipo: 'ACEPTACION_CENTRALES_RIESGO',
+    nombreArchivo: 'centrales-riesgo.pdf',
+    label: 'Formato de aceptación de consulta a centrales de riesgo',
+    plantillaHref: '/formatos/centrales-riesgo.html',
+  },
+  {
+    tipo: 'ACEPTACION_DATOS_PERSONALES',
+    nombreArchivo: 'datos-personales.pdf',
+    label: 'Formato de aceptación de tratamiento de datos personales',
+    plantillaHref: '/formatos/datos-personales.html',
+  },
 ];
+
+/** Máximo de imágenes combinando subidas locales y URLs (alineado con product-service). */
+const MAX_IMAGENES_PRODUCTO = 12;
 
 const ESTADO_CLASS = {
   PENDIENTE: 'border-gray-300 bg-gray-100 text-gray-800',
@@ -79,8 +147,10 @@ export function SellerOnboardingPanel() {
   const [ciudadResidencia, setCiudadResidencia] = useState('Bogota');
   const [telefono, setTelefono] = useState('3001234567');
   const [tipoPersona, setTipoPersona] = useState('NATURAL');
+  /** @type {Record<string, File | null>} */
+  const [archivosAdjuntos, setArchivosAdjuntos] = useState({});
 
-  const [scoreValidacion, setScoreValidacion] = useState(500);
+  const [scoreValidacion, setScoreValidacion] = useState('500');
 
   const [tipoActivacion, setTipoActivacion] = useState('ONLINE');
   const [periodoSuscripcionPlan, setPeriodoSuscripcionPlan] = useState('MENSUAL');
@@ -103,6 +173,10 @@ export function SellerOnboardingPanel() {
   const [tallaProducto, setTallaProducto] = useState('');
   const [pesoGramosProducto, setPesoGramosProducto] = useState('');
   const [imagenesUrlsProducto, setImagenesUrlsProducto] = useState('');
+  /** @type {Array<{ id: string; dataUrl: string; nombre: string }>} */
+  const [imagenesArchivoItems, setImagenesArchivoItems] = useState([]);
+  const [subiendoImagenes, setSubiendoImagenes] = useState(false);
+  const inputImagenesProductoRef = useRef(null);
   const [productoOk, setProductoOk] = useState('');
   const [tiendaActivaMsg, setTiendaActivaMsg] = useState(false);
   const [syncRolMsg, setSyncRolMsg] = useState('');
@@ -173,6 +247,10 @@ export function SellerOnboardingPanel() {
     }
   }, [location.pathname, refreshSolicitud]);
 
+  useEffect(() => {
+    setArchivosAdjuntos({});
+  }, [tipoPersona]);
+
   /** Si el id en sessionStorage cambia (crear solicitud, sync auth, otra pestaña misma ventana), vuelve a cargar. */
   useEffect(() => {
     const onSellerSession = () => {
@@ -219,12 +297,52 @@ export function SellerOnboardingPanel() {
     setLoading(true);
     try {
       const nombreMostrar = nombreVendedor.trim();
-      const adjuntos = tipoPersona === 'JURIDICA' ? ADJUNTOS_JURIDICA : ADJUNTOS_NATURAL;
+      const vCampos = validarCamposSolicitudVendedor({
+        nombres,
+        apellidos,
+        documentoIdentidad,
+        correoElectronico,
+        paisResidencia,
+        ciudadResidencia,
+        telefono,
+        nombreVendedor,
+      });
+      if (vCampos.error) {
+        setError(vCampos.error);
+        setLoading(false);
+        return;
+      }
+      const filasAdjunto = tipoPersona === 'JURIDICA' ? DEF_ADJUNTOS_JURIDICA : DEF_ADJUNTOS_NATURAL;
+      const adjuntos = [];
+      for (const row of filasAdjunto) {
+        const file = archivosAdjuntos[row.tipo];
+        if (!(file instanceof File)) {
+          setError(`Seleccione un archivo para: ${row.label}.`);
+          setLoading(false);
+          return;
+        }
+        if (!adjuntoArchivoTipoPermitido(file)) {
+          setError(`${row.label}: use PDF o imagen (JPEG, PNG o WebP).`);
+          setLoading(false);
+          return;
+        }
+        if (file.size > MAX_BYTES_ADJUNTO) {
+          setError(`${row.label}: máximo ${Math.round(MAX_BYTES_ADJUNTO / (1024 * 1024))} MB por archivo.`);
+          setLoading(false);
+          return;
+        }
+        const contenidoBase64 = await fileToBase64String(file);
+        adjuntos.push({
+          tipo: row.tipo,
+          nombreArchivo: sanitizeNombreArchivo(file.name, row.nombreArchivo),
+          contenidoBase64,
+        });
+      }
       const creada = await createSolicitud({
         ...(nombreMostrar ? { nombreVendedor: nombreMostrar } : {}),
         nombres: nombres.trim(),
         apellidos: apellidos.trim(),
-        documentoIdentidad: documentoIdentidad.trim(),
+        documentoIdentidad: vCampos.documentoNormalizado,
         correoElectronico: correoElectronico.trim(),
         paisResidencia: paisResidencia.trim(),
         ciudadResidencia: ciudadResidencia.trim(),
@@ -247,27 +365,32 @@ export function SellerOnboardingPanel() {
   async function handleValidarSolicitud() {
     setValidacionOk('');
     setError('');
-    const documentoInput = String(documentoIdentidad ?? '').trim();
-    const scoreInput = Number(scoreValidacion);
-
     if (solicitudId == null || solicitudId === '') {
       setError('No hay solicitud cargada. Crea una solicitud primero o pulsa Actualizar estado.');
       return;
     }
-    if (!documentoInput) {
-      setError('El documento es obligatorio y debe coincidir con el de la solicitud.');
+    const docServidor = solicitud?.documentoIdentidad != null ? String(solicitud.documentoIdentidad) : '';
+    if (!docServidor.trim()) {
+      setError('No se encontró el documento en la solicitud. Pulse «Actualizar estado» o vuelva a crear la solicitud.');
       return;
     }
-    if (!Number.isFinite(scoreInput)) {
-      setError('El indicador (score) debe ser un numero valido.');
+    const errDoc = validarDocumentoCoincideSolicitud(documentoIdentidad, docServidor);
+    if (errDoc) {
+      setError(errDoc);
       return;
     }
+    const errScore = validarScoreCifin(scoreValidacion);
+    if (errScore) {
+      setError(errScore);
+      return;
+    }
+    const scoreNum = Math.trunc(Number(scoreValidacion));
 
     solicitudFetchSeq.current += 1;
 
     const payload = {
-      documento: documentoInput,
-      score: Math.trunc(scoreInput),
+      documento: docServidor.trim(),
+      score: scoreNum,
     };
 
     setLoading(true);
@@ -292,12 +415,26 @@ export function SellerOnboardingPanel() {
     e.preventDefault();
     if (!solicitudId) return;
     setError('');
+    const errMonto = validarMontoActivacion(montoActivacion);
+    if (errMonto) {
+      setError(errMonto);
+      return;
+    }
+    const monto = Number(String(montoActivacion ?? '').trim().replace(',', '.'));
+    const errPago = validarCamposActivacionPorTipo(tipoActivacion, {
+      tokenPasarela,
+      ultimosDigitosTarjeta: ultimosDigitosTarjetaActivacion,
+      numeroComprobante,
+    });
+    if (errPago) {
+      setError(errPago);
+      return;
+    }
     solicitudFetchSeq.current += 1;
     setLoading(true);
     try {
       let body;
       const periodoSuscripcion = periodoSuscripcionPlan;
-      const monto = Number(montoActivacion);
       if (tipoActivacion === 'ONLINE') {
         body = {
           tipo: 'ONLINE',
@@ -307,11 +444,6 @@ export function SellerOnboardingPanel() {
         };
       } else if (tipoActivacion === 'TARJETA') {
         const dig = ultimosDigitosTarjetaActivacion.trim();
-        if (!/^\d{4}$/.test(dig)) {
-          setError('Últimos 4 dígitos de tarjeta obligatorios (4 números).');
-          setLoading(false);
-          return;
-        }
         body = { tipo: 'TARJETA', monto, ultimosDigitosTarjeta: dig, periodoSuscripcion };
       } else {
         const comp = numeroComprobante.trim() || `WEB-ACT-${solicitudId}-${Date.now()}`;
@@ -353,31 +485,95 @@ export function SellerOnboardingPanel() {
     }
   }
 
+  async function handleAgregarImagenesProducto(fileList) {
+    const files = Array.from(fileList ?? []).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return;
+    setError('');
+    const desdeTexto = parseImagenesUrlsCadena(imagenesUrlsProducto).length;
+    const cupo = MAX_IMAGENES_PRODUCTO - imagenesArchivoItems.length - desdeTexto;
+    if (cupo <= 0) {
+      setError(`Máximo ${MAX_IMAGENES_PRODUCTO} imágenes en total (archivos + URLs).`);
+      return;
+    }
+    const tomar = files.slice(0, cupo);
+    if (files.length > tomar.length) {
+      setError(`Solo se añaden ${tomar.length} archivo(s); el máximo total es ${MAX_IMAGENES_PRODUCTO}.`);
+    }
+    setSubiendoImagenes(true);
+    try {
+      const nuevos = [];
+      for (const file of tomar) {
+        if (file.size > 8 * 1024 * 1024) {
+          setError(`${file.name}: máximo 8 MB por archivo.`);
+          continue;
+        }
+        const dataUrl = await compressImageToDataUrl(file);
+        nuevos.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          dataUrl,
+          nombre: file.name,
+        });
+      }
+      if (nuevos.length) {
+        setImagenesArchivoItems((prev) => [...prev, ...nuevos]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : getRequestErrorMessage(err));
+    } finally {
+      setSubiendoImagenes(false);
+    }
+  }
+
+  function quitarImagenArchivoProducto(id) {
+    setImagenesArchivoItems((prev) => prev.filter((x) => x.id !== id));
+  }
+
   async function handleCrearProducto(e) {
     e.preventDefault();
     if (!solicitudId) return;
     setError('');
     setProductoOk('');
+    const errProd = validarFormularioProductoVendedor({
+      nombre: nombreProducto,
+      precio: precioProducto,
+      descripcion: descripcionProducto,
+      categoriasTexto: categoriasProducto,
+      marca: marcaProducto,
+      subcategoria: subcategoriaProducto,
+      color: colorProducto,
+      tamano: tamanoProducto,
+      talla: tallaProducto,
+      cantidadStock: cantidadStockProducto,
+      pesoGramos: pesoGramosProducto,
+    });
+    if (errProd) {
+      setError(errProd);
+      return;
+    }
     const categorias = categoriasProducto
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    if (!categorias.length) {
-      setError('Indica al menos una categoria (separadas por coma).');
+    const desdeTexto = parseImagenesUrlsCadena(imagenesUrlsProducto);
+    const desdeArchivo = imagenesArchivoItems.map((x) => x.dataUrl);
+    const imagenesUrls = [...desdeArchivo, ...desdeTexto];
+    if (imagenesUrls.length > MAX_IMAGENES_PRODUCTO) {
+      setError(`Máximo ${MAX_IMAGENES_PRODUCTO} imágenes en total (archivos + URLs).`);
+      return;
+    }
+    if (imagenesUrls.some((u) => u.length > 240_000)) {
+      setError('Una imagen supera el límite permitido por el servidor; comprime más o usa menos fotos.');
       return;
     }
     setLoading(true);
     try {
-      const imagenesUrls = imagenesUrlsProducto
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
       const stock = Number(cantidadStockProducto);
       const pesoG = pesoGramosProducto.trim() ? Number(pesoGramosProducto) : undefined;
+      const precioNum = Number(String(precioProducto ?? '').trim().replace(',', '.'));
       const payload = {
         vendedorSolicitudId: solicitudId,
         nombre: nombreProducto.trim(),
-        precio: Number(precioProducto),
+        precio: precioNum,
         descripcion: descripcionProducto.trim(),
         categorias,
         cantidadStock: Number.isFinite(stock) ? stock : 1,
@@ -396,6 +592,8 @@ export function SellerOnboardingPanel() {
       setNombreProducto('');
       setPrecioProducto('');
       setDescripcionProducto('');
+      setImagenesUrlsProducto('');
+      setImagenesArchivoItems([]);
     } catch (err) {
       setError(getRequestErrorMessage(err));
     } finally {
@@ -428,6 +626,8 @@ export function SellerOnboardingPanel() {
     setTiendaActivaMsg(false);
     setProductoOk('');
     setValidacionOk('');
+    setImagenesUrlsProducto('');
+    setImagenesArchivoItems([]);
     setNombreVendedor('');
     setNombres('');
     setApellidos('');
@@ -437,6 +637,7 @@ export function SellerOnboardingPanel() {
     setCiudadResidencia('Bogota');
     setTelefono('3001234567');
     setTipoPersona('NATURAL');
+    setArchivosAdjuntos({});
   }
 
   return (
@@ -551,14 +752,15 @@ export function SellerOnboardingPanel() {
         <section className="rounded-2xl border border-border bg-surface p-6 shadow-card">
           <h3 className="font-sans text-base font-semibold text-text-primary">1. Crear solicitud</h3>
           <p className="mt-1 text-sm text-text-secondary">
-            Registrate como vendedor. Estado inicial: PENDIENTE. Los adjuntos obligatorios se envían con nombres de
-            archivo de demo (sin subida real); el backend puede persistir Base64 si lo amplías.
+            Solicitud de vendedor: datos del interesado (1–7) y documentos requeridos (8). Estado inicial PENDIENTE. Los
+            archivos del punto 8 se envían en Base64 al servicio de solicitudes (máximo {Math.round(MAX_BYTES_ADJUNTO / (1024 * 1024))}{' '}
+            MB por archivo, PDF o imagen).
           </p>
           <div className="mt-5 rounded-xl border border-brand/25 bg-brand-soft/40 px-4 py-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-muted">HU-03 · Formatos legales</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-text-muted">Plantillas de los puntos 4 y 5 del anexo</p>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Abra cada enlace en una pestaña nueva para imprimir o guardar como PDF. Use estas plantillas como guía al
-              preparar sus propios archivos para la validación.
+              Descargue o abra cada formato desde esta misma página; imprima o guarde como PDF (Ctrl+P), fírmelo y súbalo
+              en el punto 8 junto con el resto de documentos.
             </p>
             <ul className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               {FORMATOS_LEGALES_VENDEDOR.map((f) => (
@@ -577,18 +779,9 @@ export function SellerOnboardingPanel() {
             </ul>
           </div>
           <form onSubmit={handleCrearSolicitud} className="mt-4 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-text-primary">Nombre comercial / tienda (opcional)</label>
-              <input
-                className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                value={nombreVendedor}
-                onChange={(e) => setNombreVendedor(e.target.value)}
-                placeholder="Si lo dejas vacío se usa nombres + apellidos"
-              />
-            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-text-primary">Nombres</label>
+                <label className="text-sm font-medium text-text-primary">1. Nombres</label>
                 <input
                   className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                   value={nombres}
@@ -596,10 +789,11 @@ export function SellerOnboardingPanel() {
                   required
                   minLength={1}
                   maxLength={120}
+                  autoComplete="given-name"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-text-primary">Apellidos</label>
+                <label className="text-sm font-medium text-text-primary">2. Apellidos</label>
                 <input
                   className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                   value={apellidos}
@@ -607,50 +801,11 @@ export function SellerOnboardingPanel() {
                   required
                   minLength={1}
                   maxLength={120}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-text-primary">Correo electrónico</label>
-              <input
-                type="email"
-                className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                value={correoElectronico}
-                onChange={(e) => setCorreoElectronico(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-text-primary">País de residencia</label>
-                <input
-                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  value={paisResidencia}
-                  onChange={(e) => setPaisResidencia(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-text-primary">Ciudad de residencia</label>
-                <input
-                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  value={ciudadResidencia}
-                  onChange={(e) => setCiudadResidencia(e.target.value)}
-                  required
+                  autoComplete="family-name"
                 />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-text-primary">Teléfono</label>
-                <input
-                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  required
-                  placeholder="3001234567"
-                />
-              </div>
               <div>
                 <label className="text-sm font-medium text-text-primary">Tipo de persona</label>
                 <select
@@ -658,28 +813,147 @@ export function SellerOnboardingPanel() {
                   value={tipoPersona}
                   onChange={(e) => setTipoPersona(e.target.value)}
                 >
-                  <option value="NATURAL">Natural</option>
-                  <option value="JURIDICA">Jurídica</option>
+                  <option value="NATURAL">Natural (cédula y anexos de persona natural)</option>
+                  <option value="JURIDICA">Jurídica (RUT, cámara de comercio y anexos)</option>
                 </select>
                 <p className="mt-1 text-xs text-text-muted">
-                  Natural: cédula + aceptaciones. Jurídica: RUT + cámara de comercio + aceptaciones.
+                  El tipo define qué documentos se validan en el servidor; el listado del punto 8 cambia automáticamente.
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-primary">3. Número de identificación (cédula o NIT)</label>
+                <input
+                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+                  value={documentoIdentidad}
+                  onChange={(e) => setDocumentoIdentidad(e.target.value)}
+                  required
+                  minLength={5}
+                  maxLength={40}
+                  autoComplete="off"
+                  inputMode="text"
+                  title="Tras quitar guiones y espacios: 5 a 32 letras o números."
+                  placeholder={tipoPersona === 'JURIDICA' ? 'Ej. 900123456-7 (NIT)' : 'Ej. 1234567890 (cédula)'}
+                />
+                <p className="mt-1 text-xs text-text-muted">
+                  {tipoPersona === 'JURIDICA'
+                    ? 'NIT: puede incluir guiones; se normalizan al enviar. Resultado: 5–32 caracteres alfanuméricos. Evite JUD y documentos que terminen en 999 (simulación).'
+                    : 'Cédula: 5–32 caracteres alfanuméricos sin espacios (puede escribir con separadores y se normalizan). Evite JUD y documentos que terminen en 999 (simulación).'}
                 </p>
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-text-primary">Documento de identidad</label>
+              <label className="text-sm font-medium text-text-primary">4. Correo electrónico</label>
+              <input
+                type="email"
+                className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+                value={correoElectronico}
+                onChange={(e) => setCorreoElectronico(e.target.value)}
+                required
+                maxLength={320}
+                autoComplete="email"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-text-primary">5. País de residencia</label>
+                <input
+                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+                  value={paisResidencia}
+                  onChange={(e) => setPaisResidencia(e.target.value)}
+                  required
+                  maxLength={120}
+                  autoComplete="country-name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-primary">6. Ciudad de residencia</label>
+                <input
+                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+                  value={ciudadResidencia}
+                  onChange={(e) => setCiudadResidencia(e.target.value)}
+                  required
+                  maxLength={120}
+                  autoComplete="address-level2"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-text-primary">7. Teléfono</label>
+              <input
+                className="mt-2 w-full max-w-md rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                required
+                maxLength={40}
+                autoComplete="tel"
+                placeholder="3001234567"
+                title="7 a 40 caracteres: dígitos, espacios, +, () y guiones."
+              />
+            </div>
+            <div className="rounded-xl border border-border-strong bg-page/80 px-4 py-4">
+              <p className="text-sm font-semibold text-text-primary">8. Documentos adjuntos (obligatorio)</p>
+              <p className="mt-1 text-xs text-text-muted">
+                Seleccione un archivo por cada requisito. Tipos admitidos: PDF, JPEG, PNG o WebP. Las filas con plantilla
+                enlazan al mismo formato descargable de arriba.
+              </p>
+              <ol className="mt-4 list-decimal space-y-4 pl-5 text-sm text-text-secondary">
+                {(tipoPersona === 'JURIDICA' ? DEF_ADJUNTOS_JURIDICA : DEF_ADJUNTOS_NATURAL).map((row) => {
+                  const sel = archivosAdjuntos[row.tipo];
+                  const inputId = `adjunto-${tipoPersona}-${row.tipo}`;
+                  return (
+                    <li key={row.tipo} className="pl-1">
+                      <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface/90 p-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium text-text-primary">{row.label}</span>
+                          {row.plantillaHref ? (
+                            <p className="mt-1 text-xs text-text-muted">
+                              <a
+                                href={row.plantillaHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-semibold text-brand underline-offset-2 hover:underline"
+                              >
+                                Abrir plantilla
+                              </a>
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 flex-col gap-1 sm:items-end">
+                          <label
+                            htmlFor={inputId}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-border-strong bg-page px-3 py-2 text-xs font-semibold text-text-primary transition hover:border-brand"
+                          >
+                            Elegir archivo
+                          </label>
+                          <input
+                            id={inputId}
+                            type="file"
+                            accept=".pdf,application/pdf,image/jpeg,image/png,image/webp"
+                            className="sr-only"
+                            onChange={(ev) => {
+                              const f = ev.target.files?.[0] ?? null;
+                              setArchivosAdjuntos((prev) => ({ ...prev, [row.tipo]: f }));
+                            }}
+                          />
+                          <span className="max-w-[220px] truncate text-right text-xs text-text-muted" title={sel?.name}>
+                            {sel instanceof File ? sel.name : 'Ningún archivo'}
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-text-primary">Nombre comercial / tienda (opcional)</label>
               <input
                 className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                value={documentoIdentidad}
-                onChange={(e) => setDocumentoIdentidad(e.target.value)}
-                required
-                minLength={5}
-                maxLength={32}
-                autoComplete="off"
+                value={nombreVendedor}
+                onChange={(e) => setNombreVendedor(e.target.value)}
+                maxLength={200}
+                placeholder="Si lo dejas vacío se usa nombres + apellidos"
               />
-              <p className="mt-1 text-xs text-text-muted">
-                Evita la marca JUD en el documento (simulacion judicial). No termines en 999 (lista de control simulada).
-              </p>
             </div>
             <button
               type="submit"
@@ -709,18 +983,25 @@ export function SellerOnboardingPanel() {
                 className="mt-2 w-full min-w-[220px] rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                 value={documentoIdentidad}
                 onChange={(e) => setDocumentoIdentidad(e.target.value)}
+                maxLength={40}
+                title="Debe coincidir con el documento de la solicitud (misma normalización)."
               />
             </div>
             <div>
               <label className="text-sm font-medium text-text-primary">Indicador simulado (CIFIN)</label>
               <input
-                type="number"
-                min={0}
-                max={9999}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={4}
                 className="mt-2 w-36 rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                 value={scoreValidacion}
-                onChange={(e) => setScoreValidacion(Number(e.target.value))}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setScoreValidacion(raw);
+                }}
               />
+              <p className="mt-1 text-xs text-text-muted">Entero entre 0 y 9999.</p>
             </div>
             <button
               type="button"
@@ -973,14 +1254,73 @@ export function SellerOnboardingPanel() {
                 <label className="text-sm font-medium text-text-primary">Talla</label>
                 <input className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm" value={tallaProducto} onChange={(e) => setTallaProducto(e.target.value)} />
               </div>
-              <div className="sm:col-span-2">
-                <label className="text-sm font-medium text-text-primary">URLs imágenes (coma)</label>
+              <div className="sm:col-span-2 space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Imágenes del producto</label>
+                  <p className="mt-1 text-xs text-text-muted">
+                    Sube varias fotos (distintos frentes) desde tu equipo o pega URLs públicas; puedes combinar ambas
+                    (máx. {MAX_IMAGENES_PRODUCTO} en total). En producción conviene un CDN en lugar de data URLs.
+                  </p>
+                </div>
                 <input
-                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 font-mono text-xs"
-                  value={imagenesUrlsProducto}
-                  onChange={(e) => setImagenesUrlsProducto(e.target.value)}
-                  placeholder="https://..., https://..."
+                  ref={inputImagenesProductoRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    void handleAgregarImagenesProducto(e.target.files);
+                    e.target.value = '';
+                  }}
                 />
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={loading || subiendoImagenes}
+                    onClick={() => inputImagenesProductoRef.current?.click()}
+                    className="rounded-xl border border-border-strong bg-page px-4 py-2.5 text-sm font-semibold text-text-primary transition hover:border-brand disabled:opacity-50"
+                  >
+                    {subiendoImagenes ? 'Procesando imágenes…' : 'Elegir imágenes del equipo'}
+                  </button>
+                  <span className="text-xs text-text-muted">PNG, JPEG, GIF o WebP · hasta 8 MB c/u</span>
+                </div>
+                {imagenesArchivoItems.length > 0 ? (
+                  <ul className="flex flex-wrap gap-3" aria-label="Imágenes seleccionadas">
+                    {imagenesArchivoItems.map((im) => (
+                      <li key={im.id} className="group relative">
+                        <img
+                          src={im.dataUrl}
+                          alt=""
+                          className="h-24 w-24 rounded-xl border border-border object-cover shadow-sm"
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Quitar ${im.nombre}`}
+                          onClick={() => quitarImagenArchivoProducto(im.id)}
+                          className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-border-strong bg-surface text-sm font-bold text-text-primary shadow transition hover:bg-danger hover:text-white"
+                        >
+                          ×
+                        </button>
+                        <p className="mt-1 max-w-[6.5rem] truncate text-[10px] text-text-muted" title={im.nombre}>
+                          {im.nombre}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div>
+                  <label htmlFor="seller-producto-imagenes-urls" className="text-xs font-medium text-text-muted">
+                    O URLs públicas (separadas por coma)
+                  </label>
+                  <textarea
+                    id="seller-producto-imagenes-urls"
+                    className="mt-1 min-h-[72px] w-full rounded-xl border border-border-strong bg-page px-4 py-3 font-mono text-xs focus:border-brand focus:ring-2 focus:ring-brand/25"
+                    value={imagenesUrlsProducto}
+                    onChange={(e) => setImagenesUrlsProducto(e.target.value)}
+                    placeholder="Una URL por línea, o varias https://… separadas por coma"
+                    maxLength={12000}
+                  />
+                </div>
               </div>
             </div>
             <button

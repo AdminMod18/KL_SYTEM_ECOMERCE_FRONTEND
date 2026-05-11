@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { FavoriteHeartButton } from '../components/FavoriteHeartButton.jsx';
 import { ProductoComunidadPanel } from '../components/ProductoComunidadPanel.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import { useFavorites } from '../context/FavoritesContext.jsx';
+import { useAuth } from '../hooks/useAuth.js';
+import { favoriteSnapshotFromProduct } from '../utils/favoriteSnapshot.js';
 import { useProductos } from '../hooks/useProductos.js';
 import { formatMoney } from '../utils/formatMoney.js';
+import { parseImagenesUrlsCadena } from '../utils/imagenesUrls.js';
 
 function imagenesProductoLista(p) {
-  const raw = p?.imagenesUrls;
-  if (raw == null || raw === '') return [];
-  return String(raw)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  return parseImagenesUrlsCadena(p?.imagenesUrls);
 }
 
 export function ProductoDetalle() {
@@ -19,6 +19,8 @@ export function ProductoDetalle() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addItem } = useCart();
+  const { isAuthenticated } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { productos, loading } = useProductos();
   const [imagenIdx, setImagenIdx] = useState(0);
 
@@ -103,7 +105,22 @@ export function ProductoDetalle() {
           <span className="inline-block rounded-full border border-border bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand">
             {topCat}
           </span>
-          <h1 className="mt-4 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">{p.nombre}</h1>
+          <div className="mt-4 flex flex-wrap items-start gap-3">
+            <h1 className="min-w-0 flex-1 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">{p.nombre}</h1>
+            <FavoriteHeartButton
+              variant="onLight"
+              active={isFavorite(p.id)}
+              className="shrink-0"
+              onPress={() => {
+                if (!isAuthenticated) {
+                  navigate('/login', { state: { from: { pathname: location.pathname, search: location.search } } });
+                  return;
+                }
+                const snap = favoriteSnapshotFromProduct(p);
+                if (snap) toggleFavorite(snap);
+              }}
+            />
+          </div>
           <p className="mt-4 text-lead text-text-secondary">{p.descripcion}</p>
           <p className="mt-6 text-3xl font-semibold text-text-primary">{formatMoney(p.precio)}</p>
           <dl className="mt-6 grid gap-2 text-sm text-text-secondary sm:grid-cols-2">
