@@ -3,9 +3,9 @@ name: CI Frontend
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   push:
-    branches: [main, develop]
+    branches: [main]
 
 concurrency:
   group: ci-frontend-${{ github.ref }}

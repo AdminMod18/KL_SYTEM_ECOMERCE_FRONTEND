@@ -1,5 +1,18 @@
 # CI/CD Frontend → AWS (GitHub Actions)
 
+**Trunk-based:** rama `main`. Deploy solo en push a `main`.
+
+## Credenciales AWS en GitHub
+
+Mismo criterio que el backend: **Settings → Secrets and variables → Actions → Secrets**
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+
+**Variables:** `AWS_REGION` = `us-east-2`, `FRONTEND_S3_BUCKET`, `VITE_API_URL`, `CLOUDFRONT_DISTRIBUTION_ID`, etc.
+
+No uses variables de CloudShell en el repositorio; caducan y no funcionan fuera de CloudShell.
+
 | Workflow | Disparador | Acción |
 |----------|------------|--------|
 | `ci.yml` | PR / push | `npm ci` + `npm run build` + artefacto `dist/` |
