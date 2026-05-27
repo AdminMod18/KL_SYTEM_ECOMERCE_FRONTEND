@@ -1,0 +1,98 @@
+# CD: build → S3 → invalidación CloudFront (rama main o manual).
+name: Deploy Frontend AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar configuración
+        run: |
+          if [ -z "${{ vars.FRONTEND_S3_BUCKET }}" ]; then
+            echo "::error::Variable FRONTEND_S3_BUCKET requerida (bucket S3 del SPA)."
+            exit 1
+          fi
+          if [ -z "${{ secrets.AWS_ROLE_ARN }}" ] && { [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; }; then
+            echo "::error::Configura AWS_ROLE_ARN (OIDC) o AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY."
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar y build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_ADMIN_URL: ${{ vars.VITE_ADMIN_URL }}
+          VITE_ANALYTICS_URL: ${{ vars.VITE_ANALYTICS_URL }}
+          VITE_API_TIMEOUT: ${{ vars.VITE_API_TIMEOUT || '20000' }}
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "::error::Variable VITE_API_URL requerida para producción (URL del API Gateway / CloudFront /api)."
+            exit 1
+          fi
+          npm ci
+          npm run build
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync a S3
+        run: |
+          aws s3 sync dist/ "s3://${{ vars.FRONTEND_S3_BUCKET }}/" \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html" \
+            --exclude "*.html"
+          aws s3 cp dist/index.html "s3://${{ vars.FRONTEND_S3_BUCKET }}/index.html" \
+            --cache-control "public,max-age=0,must-revalidate" \
+            --content-type "text/html"
+          for f in dist/*.html; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            [ "$base" = "index.html" ] && continue
+            aws s3 cp "$f" "s3://${{ vars.FRONTEND_S3_BUCKET }}/$base" \
+              --cache-control "public,max-age=0,must-revalidate" \
+              --content-type "text/html"
+          done
+
+      - name: Invalidar CloudFront
+        if: vars.CLOUDFRONT_DISTRIBUTION_ID != ''
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
+
+      - name: Resumen
+        run: |
+          echo "### Frontend desplegado" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bucket: \`${{ vars.FRONTEND_S3_BUCKET }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API build: \`${{ vars.VITE_API_URL }}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+            echo "- CloudFront invalidation: \`${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}\`" >> "$GITHUB_STEP_SUMMARY"
+          fi

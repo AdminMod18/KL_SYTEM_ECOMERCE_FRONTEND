@@ -1,0 +1,50 @@
+# CI: build Vite/React en cada PR y push.
+name: CI Frontend
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build producción
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_ADMIN_URL: ${{ vars.VITE_ADMIN_URL }}
+          VITE_ANALYTICS_URL: ${{ vars.VITE_ANALYTICS_URL }}
+          VITE_API_TIMEOUT: ${{ vars.VITE_API_TIMEOUT }}
+        run: |
+          export VITE_API_URL="${VITE_API_URL:-/api}"
+          export VITE_ADMIN_URL="${VITE_ADMIN_URL:-/api/admin}"
+          export VITE_ANALYTICS_URL="${VITE_ANALYTICS_URL:-/api/analytics}"
+          export VITE_API_TIMEOUT="${VITE_API_TIMEOUT:-20000}"
+          npm run build
+
+      - name: Subir artefacto dist/
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 7
