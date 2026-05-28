@@ -17,24 +17,24 @@ export function Filters({
 
   return (
     <aside className="glass-panel rounded-2xl p-5 lg:sticky lg:top-24">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Filters</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Filtros</h2>
 
       <div className="mt-5">
         <label htmlFor={idSearch} className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-          Search
+          Buscar
         </label>
         <input
           id={idSearch}
           type="search"
           value={busqueda}
           onChange={(e) => onBusqueda(e.target.value)}
-          placeholder="Name or description…"
+          placeholder="Nombre o descripción…"
           className="mt-2 w-full rounded-xl border border-border-strong bg-page px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
 
       <div className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Category</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Categoría</p>
         <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1">
           {categories.map((c) => {
             const checked = selectedCategories.includes(c);
@@ -56,7 +56,7 @@ export function Filters({
       </div>
 
       <div className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Price range</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Rango de precios</p>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <div>
             <label htmlFor={idMin} className="sr-only">

@@ -12,16 +12,29 @@ import { motion } from 'framer-motion';
 const SLUG_TO_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.slug, c.title]));
 
 export function Catalogo() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { productos, loading, error, reload } = useProductos();
   const { addItem } = useCart();
   const categories = useMemo(() => extractCategories(productos), [productos]);
 
+  const busqueda = searchParams.get('q') ?? '';
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [precioMin, setPrecioMin] = useState(0);
   const [precioMax, setPrecioMax] = useState(999999999);
-  const [busqueda, setBusqueda] = useState('');
   const visitRegistered = useRef(false);
+
+  function setBusqueda(value) {
+    const trimmed = String(value ?? '').trim();
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (trimmed) next.set('q', trimmed);
+        else next.delete('q');
+        return next;
+      },
+      { replace: true },
+    );
+  }
 
   useEffect(() => {
     if (visitRegistered.current) return;
@@ -68,8 +81,15 @@ export function Catalogo() {
   return (
     <div>
       <div className="mb-10 max-w-content">
-        <h1 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Catalog</h1>
-        <p className="mt-3 text-lead text-text-secondary">Browse premium inventory with elegant filters and instant search.</p>
+        <h1 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Catálogo</h1>
+        <p className="mt-3 text-lead text-text-secondary">
+          Explora nuestro catálogo premium con filtros elegantes y búsqueda instantánea.
+          {busqueda.trim() ? (
+            <span className="mt-2 block text-sm text-text-muted">
+              Resultados para: <strong className="text-text-primary">&quot;{busqueda.trim()}&quot;</strong>
+            </span>
+          ) : null}
+        </p>
       </div>
 
       {error && (
