@@ -29,6 +29,9 @@ import {
 } from '../utils/sellerFormValidators.js';
 import { motion } from 'framer-motion';
 import { Check, CreditCard, FileText, Package, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth.js';
+import { recoverSellerSolicitudSession } from '../auth/sellerRecover.js';
+import { SellerActivationPayment } from './SellerActivationPayment.jsx';
 
 /** Límite por archivo (PDF o imagen); el cuerpo JSON crece ~4/3 por Base64. */
 const MAX_BYTES_ADJUNTO = 3 * 1024 * 1024;
@@ -188,6 +191,7 @@ function estadoDesdeSolicitud(s) {
 
 export function SellerOnboardingPanel() {
   const location = useLocation();
+  const { token, email, username, isAuthenticated } = useAuth();
   const [solicitud, setSolicitud] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -296,13 +300,27 @@ export function SellerOnboardingPanel() {
   /** Cada vez que entras a /seller, trae el estado real del API (evita quedar con datos viejos sin F5). */
   useEffect(() => {
     if (normalizePath(location.pathname) !== '/seller') return;
-    const id = getSellerSolicitudIdFromSession();
-    if (id != null) {
-      void refreshSolicitud(id);
-    } else {
-      setSolicitud(null);
-    }
-  }, [location.pathname, refreshSolicitud]);
+
+    let cancel = false;
+    (async () => {
+      let id = getSellerSolicitudIdFromSession();
+      if (id == null && isAuthenticated) {
+        const match = await recoverSellerSolicitudSession(token, { email, username, force: false });
+        if (cancel) return;
+        id = match?.id ?? getSellerSolicitudIdFromSession();
+      }
+      if (cancel) return;
+      if (id != null) {
+        await refreshSolicitud(id);
+      } else {
+        setSolicitud(null);
+      }
+    })();
+
+    return () => {
+      cancel = true;
+    };
+  }, [location.pathname, refreshSolicitud, token, email, username, isAuthenticated]);
 
   useEffect(() => {
     setArchivosAdjuntos({});
@@ -312,13 +330,19 @@ export function SellerOnboardingPanel() {
   useEffect(() => {
     const onSellerSession = () => {
       if (normalizePath(window.location.pathname) !== '/seller') return;
-      const id = getSellerSolicitudIdFromSession();
-      if (id != null) void refreshSolicitud(id);
-      else setSolicitud(null);
+      void (async () => {
+        let id = getSellerSolicitudIdFromSession();
+        if (id == null && isAuthenticated) {
+          const match = await recoverSellerSolicitudSession(token, { email, username, force: false });
+          id = match?.id ?? getSellerSolicitudIdFromSession();
+        }
+        if (id != null) await refreshSolicitud(id);
+        else setSolicitud(null);
+      })();
     };
     window.addEventListener(SELLER_SESSION_CHANGED, onSellerSession);
     return () => window.removeEventListener(SELLER_SESSION_CHANGED, onSellerSession);
-  }, [refreshSolicitud]);
+  }, [refreshSolicitud, token, email, username, isAuthenticated]);
 
   /** Al volver a la pestaña, reconciliar con el servidor (p. ej. aprobaron la solicitud desde el panel Director). */
   useEffect(() => {
@@ -1064,101 +1088,28 @@ export function SellerOnboardingPanel() {
       ) : null}
 
       {activeStep === 3 && solicitudId && puedeActivar ? (
-        <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
-          <h3 className="font-sans text-base font-semibold text-text-primary">Activar tu tienda</h3>
-          <p className="mt-1 text-sm text-text-secondary">Completa el pago para activar tu cuenta de vendedor.</p>
-          <form onSubmit={handleActivar} className="mt-4 space-y-4">
-            <div>
-              <label className="text-sm font-medium text-text-primary">Plan de suscripción</label>
-              <select
-                className="mt-2 w-full max-w-xs rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                value={periodoSuscripcionPlan}
-                onChange={(e) => setPeriodoSuscripcionPlan(e.target.value)}
-              >
-                <option value="MENSUAL">Mensual</option>
-                <option value="SEMESTRAL">Semestral</option>
-                <option value="ANUAL">Anual</option>
-              </select>
-            </div>
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-text-primary">Tipo de pago</legend>
-              <label className="mr-6 inline-flex items-center gap-2 text-sm">
-                <input type="radio" name="tipoAct" checked={tipoActivacion === 'ONLINE'} onChange={() => setTipoActivacion('ONLINE')} />
-                ONLINE
-              </label>
-              <label className="mr-6 inline-flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="tipoAct"
-                  checked={tipoActivacion === 'TARJETA'}
-                  onChange={() => setTipoActivacion('TARJETA')}
-                />
-                TARJETA
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="tipoAct"
-                  checked={tipoActivacion === 'CONSIGNACION'}
-                  onChange={() => setTipoActivacion('CONSIGNACION')}
-                />
-                CONSIGNACION
-              </label>
-            </fieldset>
-            <div>
-              <label className="text-sm font-medium text-text-primary">Monto</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                className="mt-2 w-full max-w-xs rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                value={montoActivacion}
-                onChange={(e) => setMontoActivacion(e.target.value)}
-                required
-              />
-            </div>
-            {tipoActivacion === 'ONLINE' ? (
-              <div>
-                <label className="text-sm font-medium text-text-primary">tokenPasarela</label>
-                <input
-                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 font-mono text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  value={tokenPasarela}
-                  onChange={(e) => setTokenPasarela(e.target.value)}
-                  required
-                />
-                <p className="mt-1 text-xs text-text-muted">Use tok_simular_rechazo solo para probar rechazo declinado.</p>
-              </div>
-            ) : tipoActivacion === 'TARJETA' ? (
-              <div>
-                <label className="text-sm font-medium text-text-primary">Últimos 4 dígitos tarjeta</label>
-                <input
-                  className="mt-2 w-full max-w-[12rem] rounded-xl border border-border-strong bg-page px-4 py-3 font-mono text-sm tracking-widest focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  value={ultimosDigitosTarjetaActivacion}
-                  onChange={(e) => setUltimosDigitosTarjetaActivacion(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  maxLength={4}
-                  required
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="text-sm font-medium text-text-primary">Numero comprobante consignacion</label>
-                <input
-                  className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 font-mono text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  value={numeroComprobante}
-                  onChange={(e) => setNumeroComprobante(e.target.value)}
-                  placeholder="Opcional: se genera si vacio"
-                />
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-xl bg-success px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
-            >
-              Activar tienda
-            </button>
-          </form>
-        </section>
+        <SellerActivationPayment
+          cardHolderName={
+            [nombres, apellidos].filter(Boolean).join(' ') ||
+            solicitud?.nombreVendedor ||
+            nombreVendedor ||
+            'Vendedor Mercado'
+          }
+          periodoSuscripcionPlan={periodoSuscripcionPlan}
+          onPeriodoChange={setPeriodoSuscripcionPlan}
+          tipoActivacion={tipoActivacion}
+          onTipoChange={setTipoActivacion}
+          montoActivacion={montoActivacion}
+          onMontoChange={setMontoActivacion}
+          tokenPasarela={tokenPasarela}
+          onTokenChange={setTokenPasarela}
+          ultimosDigitosTarjetaActivacion={ultimosDigitosTarjetaActivacion}
+          onUltimosDigitosChange={setUltimosDigitosTarjetaActivacion}
+          numeroComprobante={numeroComprobante}
+          onNumeroComprobanteChange={setNumeroComprobante}
+          loading={loading}
+          onSubmit={handleActivar}
+        />
       ) : null}
 
       {activeStep === 4 && puedePublicar ? (

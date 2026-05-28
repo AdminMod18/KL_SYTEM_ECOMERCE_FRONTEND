@@ -110,3 +110,82 @@ export async function renovarSuscripcion(id, payload) {
   const { data } = await apiClient.post(`/solicitudes/${id}/renovar-suscripcion`, payload);
   return data;
 }
+
+const ESTADO_PRIORIDAD = {
+  ACTIVA: 6,
+  EN_MORA: 5,
+  APROBADA: 4,
+  PENDIENTE: 3,
+  DEVUELTA: 2,
+  RECHAZADA: 1,
+  CANCELADA: 0,
+};
+
+function estadoSolicitudValor(estado) {
+  const key = estado != null ? String(estado).trim().toUpperCase() : '';
+  return ESTADO_PRIORIDAD[key] ?? -1;
+}
+
+/**
+ * Elige la solicitud más relevante para reanudar el flujo de vendedor.
+ * @param {Array<Record<string, unknown>>} items
+ */
+export function elegirSolicitudPreferida(items) {
+  if (!Array.isArray(items) || !items.length) return null;
+  const unicas = [...new Map(items.filter((x) => x?.id != null).map((x) => [x.id, x])).values()];
+  unicas.sort((a, b) => {
+    const diff = estadoSolicitudValor(b.estado) - estadoSolicitudValor(a.estado);
+    if (diff !== 0) return diff;
+    return Number(b.id) - Number(a.id);
+  });
+  return unicas[0] ?? null;
+}
+
+/**
+ * Busca solicitudes del usuario autenticado por correo, usuario o documento.
+ * @param {{ email?: string | null; username?: string | null }} identidad
+ */
+export async function buscarSolicitudDelUsuario({ email, username }) {
+  const terminos = [];
+  const push = (v) => {
+    const t = (v ?? '').trim();
+    if (!t) return;
+    const key = t.toLowerCase();
+    if (terminos.some((x) => x.toLowerCase() === key)) return;
+    terminos.push(t);
+  };
+  push(email);
+  push(username);
+
+  const acumulado = [];
+  for (const q of terminos) {
+    try {
+      const porTexto = await getSolicitudes({ q });
+      acumulado.push(...porTexto);
+    } catch {
+      /* sin coincidencias */
+    }
+    if (/^[\dA-Za-z.-]+$/.test(q.replace(/\s/g, ''))) {
+      try {
+        const porDoc = await getSolicitudes({ documentoIdentidad: q });
+        acumulado.push(...porDoc);
+      } catch {
+        /* sin coincidencias */
+      }
+    }
+  }
+
+  const emailNorm = (email ?? '').trim().toLowerCase();
+  const userNorm = (username ?? '').trim().toLowerCase();
+  const filtradas = acumulado.filter((row) => {
+    const correo = String(row.correoElectronico ?? '').trim().toLowerCase();
+    const doc = String(row.documentoIdentidad ?? '').trim().toLowerCase();
+    if (emailNorm && correo === emailNorm) return true;
+    if (userNorm && (correo === userNorm || doc === userNorm)) return true;
+    if (emailNorm && correo.includes(emailNorm)) return true;
+    if (userNorm && userNorm.length >= 4 && (correo.includes(userNorm) || doc.includes(userNorm))) return true;
+    return terminos.length === 1;
+  });
+
+  return elegirSolicitudPreferida(filtradas.length ? filtradas : acumulado);
+}

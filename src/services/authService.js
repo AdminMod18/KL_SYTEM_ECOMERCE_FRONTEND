@@ -1,6 +1,7 @@
 import { apiClient } from '../api/apiClient.js';
 import { setSession } from '../auth/authStorage.js';
 import { clearSellerSolicitudIdSession, setSellerSolicitudIdSession } from '../auth/sellerSession.js';
+import { recoverSellerSolicitudSession } from '../auth/sellerRecover.js';
 
 /**
  * @param {{ username: string; password: string }} creds
@@ -13,6 +14,7 @@ export async function login(creds) {
   });
   clearSellerSolicitudIdSession();
   setSession({ accessToken: data.accessToken, roles: data.roles ?? [] });
+  await recoverSellerSolicitudSession(data.accessToken, { force: true });
   window.dispatchEvent(new Event('auth:changed'));
   return data;
 }
