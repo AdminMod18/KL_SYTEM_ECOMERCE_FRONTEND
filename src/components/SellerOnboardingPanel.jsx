@@ -28,6 +28,7 @@ import {
   validarScoreCifin,
 } from '../utils/sellerFormValidators.js';
 import { motion } from 'framer-motion';
+import { Check, CreditCard, FileText, Package, ShieldCheck } from 'lucide-react';
 
 /** Límite por archivo (PDF o imagen); el cuerpo JSON crece ~4/3 por Base64. */
 const MAX_BYTES_ADJUNTO = 3 * 1024 * 1024;
@@ -112,6 +113,61 @@ const ESTADO_CLASS = {
 
 function badgeClass(estado) {
   return ESTADO_CLASS[estado] ?? 'border-border bg-surface text-text-primary';
+}
+
+const ONBOARDING_STEPS = [
+  { id: 1, label: 'Solicitud', icon: FileText },
+  { id: 2, label: 'Validación', icon: ShieldCheck },
+  { id: 3, label: 'Activación', icon: CreditCard },
+  { id: 4, label: 'Publicar', icon: Package },
+];
+
+function resolveActiveStep(solicitudId, estado, onboardingBloqueado) {
+  if (!solicitudId || onboardingBloqueado) return 1;
+  if (estado === 'PENDIENTE' || estado === 'DEVUELTA') return 2;
+  if (estado === 'APROBADA') return 3;
+  if (estado === 'ACTIVA') return 4;
+  return 1;
+}
+
+function SellerStepper({ current }) {
+  return (
+    <nav aria-label="Progreso del vendedor" className="glass-panel rounded-2xl p-4 sm:p-5">
+      <ol className="grid gap-3 sm:grid-cols-4">
+        {ONBOARDING_STEPS.map((step) => {
+          const done = current > step.id;
+          const active = current === step.id;
+          const Icon = step.icon;
+          return (
+            <li
+              key={step.id}
+              className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition ${
+                active
+                  ? 'border-blue-500/40 bg-blue-500/10'
+                  : done
+                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    : 'border-border/60 bg-surface/40 opacity-60'
+              }`}
+            >
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                  active ? 'bg-blue-600 text-white' : done ? 'bg-emerald-600 text-white' : 'bg-surface-muted text-text-muted'
+                }`}
+              >
+                {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Paso {step.id}</p>
+                <p className={`truncate text-sm font-semibold ${active ? 'text-text-primary' : 'text-text-secondary'}`}>
+                  {step.label}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
 }
 
 /** JSON puede traer `estado` como string o (según serialización) como objeto; el badge debe reflejar el microservicio. */
@@ -290,6 +346,7 @@ export function SellerOnboardingPanel() {
   const puedePublicar = estado === 'ACTIVA';
   const onboardingBloqueado = estado === 'RECHAZADA' || estado === 'CANCELADA';
   const esDevuelta = estado === 'DEVUELTA';
+  const activeStep = resolveActiveStep(solicitudId, estado, onboardingBloqueado);
 
   async function handleCrearSolicitud(e) {
     e.preventDefault();
@@ -642,15 +699,36 @@ export function SellerOnboardingPanel() {
   }
 
   return (
-    <div className="space-y-8">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-panel rounded-2xl p-6 shadow-card">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-sans text-lg font-semibold text-text-primary">Estado de tu solicitud</h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              Flujo: crear solicitud &rarr; validacion automatica &rarr; si DEVUELTA puedes corregir y revalidar &rarr;
-              activacion con pago (solo APROBADA) &rarr; publicar productos (solo ACTIVA).
-            </p>
+    <div className="space-y-6">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-sans text-base font-semibold text-text-primary">Tu solicitud</h2>
+            {estado ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass(estado)} ${
+                    esDevuelta ? 'ring-2 ring-amber-400/60 ring-offset-2 ring-offset-transparent' : ''
+                  }`}
+                >
+                  {estado}
+                </span>
+                {solicitudId ? (
+                  <span className="text-xs text-text-muted">
+                    ID {solicitudId}
+                    {solicitud?.numeroRadicado ? ` · Rad. ${solicitud.numeroRadicado}` : ''}
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-text-muted">Aún no has enviado una solicitud. Completa el paso 1.</p>
+            )}
+            {solicitudId && solicitud ? (
+              <p className="mt-2 truncate text-sm text-text-secondary">
+                {[solicitud.nombres, solicitud.apellidos].filter(Boolean).join(' ') || solicitud.nombreVendedor || '—'}
+                {solicitud.correoElectronico ? ` · ${solicitud.correoElectronico}` : ''}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {solicitudId ? (
@@ -658,86 +736,49 @@ export function SellerOnboardingPanel() {
                 type="button"
                 disabled={loading}
                 onClick={() => refreshSolicitud(solicitudId)}
-                className="rounded-xl border border-border-strong px-4 py-2 text-sm font-semibold text-text-primary transition hover:border-brand disabled:opacity-50"
+                className="rounded-xl border border-border-strong px-3 py-2 text-xs font-semibold text-text-primary transition hover:border-brand disabled:opacity-50"
               >
-                Actualizar estado
+                Actualizar
               </button>
             ) : null}
             {estado === 'ACTIVA' && solicitudId ? (
-            <button
+              <button
                 type="button"
                 disabled={loading || syncRolLoading}
                 onClick={() => handleSincronizarRolSesion()}
-              className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-300"
+                className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-300"
               >
-                {syncRolLoading ? 'Sincronizando rol…' : 'Actualizar rol VENDEDOR en sesión'}
+                {syncRolLoading ? 'Sincronizando…' : 'Sync rol'}
               </button>
             ) : null}
             <button
               type="button"
               onClick={handleNuevaSolicitud}
-            className="rounded-xl border border-border-strong px-4 py-2 text-sm font-semibold text-text-secondary transition hover:border-red-400 hover:text-red-500"
+              className="rounded-xl border border-border-strong px-3 py-2 text-xs font-semibold text-text-muted transition hover:border-red-400 hover:text-red-500"
             >
               Nueva solicitud
             </button>
           </div>
         </div>
 
-        {estado ? (
-          <div
-            className={`mt-4 inline-flex rounded-full border px-4 py-1.5 text-sm font-semibold ${badgeClass(estado)} ${
-              esDevuelta ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-surface' : ''
-            }`}
-          >
-            {estado}
-            {solicitudId
-              ? ` · ID ${solicitudId}${solicitud?.numeroRadicado ? ` · Rad. ${solicitud.numeroRadicado}` : ''}`
-              : ''}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-text-muted">Sin solicitud en esta sesion. Completa el formulario inferior.</p>
-        )}
-
         {syncRolMsg ? (
-          <p className="mt-3 rounded-lg border border-green-400/50 bg-green-50/80 px-3 py-2 text-xs text-green-900">{syncRolMsg}</p>
-        ) : null}
-
-        {solicitudId && solicitud ? (
-          <p className="mt-3 text-xs leading-relaxed text-text-secondary">
-            <span className="font-medium text-text-primary">Resumen:</span>{' '}
-            {[solicitud.nombres, solicitud.apellidos].filter(Boolean).join(' ') || solicitud.nombreVendedor || '—'}
-            {solicitud.correoElectronico ? ` · ${solicitud.correoElectronico}` : ''}
-            {solicitud.tipoPersona ? ` · ${solicitud.tipoPersona}` : ''}
-            {Array.isArray(solicitud.adjuntos) && solicitud.adjuntos.length > 0
-              ? ` · ${solicitud.adjuntos.length} adjuntos`
-              : ''}
-          </p>
+          <p className="mt-3 rounded-lg border border-green-400/40 bg-green-500/10 px-3 py-2 text-xs text-green-800 dark:text-green-300">{syncRolMsg}</p>
         ) : null}
 
         {esDevuelta ? (
-          <div
-            className="mt-4 rounded-xl border border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
-            role="status"
-          >
-            <p className="font-semibold text-amber-950">Solicitud devuelta</p>
-            <p className="mt-1 leading-relaxed">
-              Tu solicitud fue devuelta. Debes corregir la información y volver a validarla. Ajusta documento y/o
-              indicador (score) y pulsa «Reintentar validación». El pago y los productos siguen bloqueados hasta que la
-              solicitud quede APROBADA y luego ACTIVA.
+          <div className="mt-4 rounded-xl border border-amber-400/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100" role="status">
+            <p className="font-semibold">Solicitud devuelta</p>
+            <p className="mt-1 text-xs leading-relaxed opacity-90">
+              Corrige documento o score y vuelve a validar en el paso 2.
             </p>
           </div>
         ) : null}
 
         {tiendaActivaMsg && estado === 'ACTIVA' ? (
-          <div className="mt-4 rounded-xl border border-green-400 bg-green-50 px-4 py-3 text-sm text-green-900">
-            <p className="font-medium">Tu tienda ya está activa.</p>
-            <p className="mt-2 leading-relaxed">
-              Si iniciaste sesión como comprador registrado, tu cuenta se ha actualizado con el rol de vendedor al coincidir el{' '}
-              <strong>documento</strong> o el <strong>correo</strong> de la solicitud con tu registro. Hemos intentado renovar tu sesión
-              automáticamente; si el menú no muestra aún el modo vendedor, cierra sesión y vuelve a entrar.
-            </p>
-            <p className="mt-2 text-xs text-green-950/80">
-              Caso estudio: registro único como comprador → flujo solicitud + validación + pago → estado ACTIVA y publicación de productos.
+          <div className="mt-4 rounded-xl border border-green-400/50 bg-green-500/10 px-4 py-3 text-sm text-green-900 dark:text-green-100">
+            <p className="font-medium">Tu tienda está activa.</p>
+            <p className="mt-1 text-xs leading-relaxed opacity-90">
+              Si no ves el rol vendedor en el menú, cierra sesión y vuelve a entrar.
             </p>
           </div>
         ) : null}
@@ -749,40 +790,44 @@ export function SellerOnboardingPanel() {
         ) : null}
       </motion.div>
 
-      {!solicitudId || onboardingBloqueado ? (
-        <section className="glass-panel rounded-2xl p-6 shadow-card">
-          <h3 className="font-sans text-base font-semibold text-text-primary">1. Crear solicitud</h3>
+      <SellerStepper current={activeStep} />
+
+      {activeStep === 1 && (!solicitudId || onboardingBloqueado) ? (
+        <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+          <h3 className="font-sans text-base font-semibold text-text-primary">Completa tu solicitud</h3>
           <p className="mt-1 text-sm text-text-secondary">
-            Solicitud de vendedor: datos del interesado (1–7) y documentos requeridos (8). Estado inicial PENDIENTE. Los
-            archivos del punto 8 se envían en Base64 al servicio de solicitudes (máximo {Math.round(MAX_BYTES_ADJUNTO / (1024 * 1024))}{' '}
-            MB por archivo, PDF o imagen).
+            Datos personales y documentos requeridos. PDF o imagen, máx. {Math.round(MAX_BYTES_ADJUNTO / (1024 * 1024))} MB c/u.
           </p>
-            <div className="mt-5 rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-text-muted">Plantillas de los puntos 4 y 5 del anexo</p>
-            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-              Descargue o abra cada formato desde esta misma página; imprima o guarde como PDF (Ctrl+P), fírmelo y súbalo
-              en el punto 8 junto con el resto de documentos.
+            <details className="group mt-5 rounded-xl border border-border/60 bg-surface/30 open:border-blue-500/30 open:bg-blue-500/5">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-text-primary [&::-webkit-details-marker]:hidden">
+              Plantillas legales (opcional: descargar antes de subir)
+            </summary>
+            <div className="border-t border-border/60 px-4 pb-4 pt-3">
+            <p className="text-xs leading-relaxed text-text-muted">
+              Imprima o guarde como PDF, fírmelas y súbalas en la sección de documentos.
             </p>
-            <ul className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <ul className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {FORMATOS_LEGALES_VENDEDOR.map((f) => (
-                <li key={f.href} className="flex-1 sm:min-w-[220px]">
+                <li key={f.href} className="flex-1 sm:min-w-[200px]">
                   <a
                     href={f.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex h-full flex-col rounded-xl border border-border-strong bg-surface px-4 py-3 text-sm shadow-sm transition hover:border-brand"
+                    className="flex h-full flex-col rounded-xl border border-border-strong bg-surface px-3 py-2.5 text-sm transition hover:border-brand"
                   >
                     <span className="font-semibold text-brand">{f.label}</span>
-                    <span className="mt-1 text-xs text-text-muted">{f.description}</span>
                   </a>
                 </li>
               ))}
             </ul>
-          </div>
-          <form onSubmit={handleCrearSolicitud} className="mt-4 space-y-4">
+            </div>
+          </details>
+          <form onSubmit={handleCrearSolicitud} className="mt-6 space-y-6">
+            <fieldset className="space-y-4">
+              <legend className="text-xs font-bold uppercase tracking-wider text-text-muted">Datos personales</legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-text-primary">1. Nombres</label>
+                <label className="text-sm font-medium text-text-primary">Nombres</label>
                 <input
                   className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                   value={nombres}
@@ -794,7 +839,7 @@ export function SellerOnboardingPanel() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-text-primary">2. Apellidos</label>
+                <label className="text-sm font-medium text-text-primary">Apellidos</label>
                 <input
                   className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                   value={apellidos}
@@ -814,15 +859,12 @@ export function SellerOnboardingPanel() {
                   value={tipoPersona}
                   onChange={(e) => setTipoPersona(e.target.value)}
                 >
-                  <option value="NATURAL">Natural (cédula y anexos de persona natural)</option>
-                  <option value="JURIDICA">Jurídica (RUT, cámara de comercio y anexos)</option>
+                  <option value="NATURAL">Persona natural</option>
+                  <option value="JURIDICA">Persona jurídica</option>
                 </select>
-                <p className="mt-1 text-xs text-text-muted">
-                  El tipo define qué documentos se validan en el servidor; el listado del punto 8 cambia automáticamente.
-                </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-text-primary">3. Número de identificación (cédula o NIT)</label>
+                <label className="text-sm font-medium text-text-primary">Documento (cédula o NIT)</label>
                 <input
                   className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                   value={documentoIdentidad}
@@ -833,17 +875,15 @@ export function SellerOnboardingPanel() {
                   autoComplete="off"
                   inputMode="text"
                   title="Tras quitar guiones y espacios: 5 a 32 letras o números."
-                  placeholder={tipoPersona === 'JURIDICA' ? 'Ej. 900123456-7 (NIT)' : 'Ej. 1234567890 (cédula)'}
+                  placeholder={tipoPersona === 'JURIDICA' ? 'Ej. 900123456-7' : 'Ej. 1234567890'}
                 />
-                <p className="mt-1 text-xs text-text-muted">
-                  {tipoPersona === 'JURIDICA'
-                    ? 'NIT: puede incluir guiones; se normalizan al enviar. Resultado: 5–32 caracteres alfanuméricos. Evite JUD y documentos que terminen en 999 (simulación).'
-                    : 'Cédula: 5–32 caracteres alfanuméricos sin espacios (puede escribir con separadores y se normalizan). Evite JUD y documentos que terminen en 999 (simulación).'}
-                </p>
               </div>
             </div>
+            </fieldset>
+            <fieldset className="space-y-4">
+              <legend className="text-xs font-bold uppercase tracking-wider text-text-muted">Contacto</legend>
             <div>
-              <label className="text-sm font-medium text-text-primary">4. Correo electrónico</label>
+              <label className="text-sm font-medium text-text-primary">Correo electrónico</label>
               <input
                 type="email"
                 className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
@@ -856,7 +896,7 @@ export function SellerOnboardingPanel() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-text-primary">5. País de residencia</label>
+                <label className="text-sm font-medium text-text-primary">País</label>
                 <input
                   className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                   value={paisResidencia}
@@ -867,7 +907,7 @@ export function SellerOnboardingPanel() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-text-primary">6. Ciudad de residencia</label>
+                <label className="text-sm font-medium text-text-primary">Ciudad</label>
                 <input
                   className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                   value={ciudadResidencia}
@@ -879,7 +919,7 @@ export function SellerOnboardingPanel() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-text-primary">7. Teléfono</label>
+              <label className="text-sm font-medium text-text-primary">Teléfono</label>
               <input
                 className="mt-2 w-full max-w-md rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                 value={telefono}
@@ -891,11 +931,12 @@ export function SellerOnboardingPanel() {
                 title="7 a 40 caracteres: dígitos, espacios, +, () y guiones."
               />
             </div>
-            <div className="rounded-xl border border-border-strong bg-page/80 px-4 py-4">
-              <p className="text-sm font-semibold text-text-primary">8. Documentos adjuntos (obligatorio)</p>
-              <p className="mt-1 text-xs text-text-muted">
-                Seleccione un archivo por cada requisito. Tipos admitidos: PDF, JPEG, PNG o WebP. Las filas con plantilla
-                enlazan al mismo formato descargable de arriba.
+            </fieldset>
+            <fieldset className="space-y-4">
+              <legend className="text-xs font-bold uppercase tracking-wider text-text-muted">Documentos</legend>
+            <div className="rounded-xl border border-border/60 bg-surface/30 px-4 py-4">
+              <p className="text-sm text-text-secondary">
+                Sube un archivo por requisito (PDF, JPEG, PNG o WebP).
               </p>
               <ol className="mt-4 list-decimal space-y-4 pl-5 text-sm text-text-secondary">
                 {(tipoPersona === 'JURIDICA' ? DEF_ADJUNTOS_JURIDICA : DEF_ADJUNTOS_NATURAL).map((row) => {
@@ -946,8 +987,9 @@ export function SellerOnboardingPanel() {
                 })}
               </ol>
             </div>
+            </fieldset>
             <div>
-              <label className="text-sm font-medium text-text-primary">Nombre comercial / tienda (opcional)</label>
+              <label className="text-sm font-medium text-text-primary">Nombre comercial (opcional)</label>
               <input
                 className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
                 value={nombreVendedor}
@@ -959,7 +1001,7 @@ export function SellerOnboardingPanel() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-black/90 disabled:opacity-50"
+              className="premium-button w-full sm:w-auto disabled:opacity-50"
             >
               Enviar solicitud
             </button>
@@ -967,15 +1009,15 @@ export function SellerOnboardingPanel() {
         </section>
       ) : null}
 
-      {solicitudId && puedeRevalidar ? (
-        <section className="glass-panel rounded-2xl p-6 shadow-card">
+      {activeStep === 2 && solicitudId && puedeRevalidar ? (
+        <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
           <h3 className="font-sans text-base font-semibold text-text-primary">
-            {esDevuelta ? '2. Reintentar validación' : '2. Validacion automatica'}
+            {esDevuelta ? 'Reintentar validación' : 'Validación automática'}
           </h3>
           <p className="mt-1 text-sm text-text-secondary">
             {esDevuelta
-              ? 'Mismo número de solicitud: puedes editar documento y score y volver a enviar. Podrás repetir este paso las veces que necesites.'
-              : 'Llama al motor de validacion (Datacrédito/CIFIN/judicial simulados). Umbrales típicos: indicador &lt;550 rechazo, 550–649 devolución, ≥650 con línea NORMAL suele permitir aprobación si Datacrédito y judicial lo permiten.'}
+              ? 'Ajusta documento o score y vuelve a enviar.'
+              : 'Validación crediticia simulada. Score ≥650 suele aprobar con línea NORMAL.'}
           </p>
           <div className="mt-4 flex flex-wrap items-end gap-4">
             <div>
@@ -1021,10 +1063,10 @@ export function SellerOnboardingPanel() {
         </section>
       ) : null}
 
-      {solicitudId && puedeActivar ? (
-        <section className="glass-panel rounded-2xl p-6 shadow-card">
-          <h3 className="font-sans text-base font-semibold text-text-primary">3. Activar vendedor (pago)</h3>
-          <p className="mt-1 text-sm text-text-secondary">Solo en estado APROBADA. Integra con payment-service.</p>
+      {activeStep === 3 && solicitudId && puedeActivar ? (
+        <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+          <h3 className="font-sans text-base font-semibold text-text-primary">Activar tu tienda</h3>
+          <p className="mt-1 text-sm text-text-secondary">Completa el pago para activar tu cuenta de vendedor.</p>
           <form onSubmit={handleActivar} className="mt-4 space-y-4">
             <div>
               <label className="text-sm font-medium text-text-primary">Plan de suscripción</label>
@@ -1119,29 +1161,13 @@ export function SellerOnboardingPanel() {
         </section>
       ) : null}
 
-      <section className="glass-panel rounded-2xl p-6 shadow-card">
-        <h3 className="font-sans text-base font-semibold text-text-primary">4. Publicar producto</h3>
-        {!puedePublicar ? (
-          <p
-            className={`mt-2 rounded-xl border px-4 py-3 text-sm ${
-              esDevuelta
-                ? 'border-amber-400 bg-amber-50 text-amber-950'
-                : estado === 'APROBADA'
-                  ? 'border-amber-300 bg-amber-50 text-amber-950'
-                  : 'border-border-strong bg-surface-muted text-text-secondary'
-            }`}
-            role="note"
-          >
-            {esDevuelta
-              ? 'No puedes crear productos con la solicitud en DEVUELTA. Revalida hasta obtener APROBADA, activa la tienda con el pago y al quedar ACTIVA podrás publicar.'
-              : estado === 'APROBADA'
-                ? 'La solicitud está APROBADA pero aún no ACTIVA: completa el pago en la sección 3. Solo con estado ACTIVA puedes crear productos.'
-                : estado === 'PENDIENTE'
-                  ? 'Completa primero la validación automática y el flujo hasta ACTIVA para poder publicar productos.'
-                  : 'Debes activar tu cuenta de vendedor (estado ACTIVA tras el pago) antes de crear productos.'}
-          </p>
-        ) : (
-          <form onSubmit={handleCrearProducto} className="mt-4 space-y-4">
+      {activeStep === 4 && puedePublicar ? (
+      <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+        <h3 className="font-sans text-base font-semibold text-text-primary">Publica tu primer producto</h3>
+        <p className="mt-1 text-sm text-text-secondary">Tu tienda está activa. Completa los datos esenciales y publica.</p>
+          <form onSubmit={handleCrearProducto} className="mt-6 space-y-6">
+            <fieldset className="space-y-4">
+              <legend className="text-xs font-bold uppercase tracking-wider text-text-muted">Información básica</legend>
             <div>
               <label className="text-sm font-medium text-text-primary">Nombre</label>
               <input
@@ -1182,7 +1208,12 @@ export function SellerOnboardingPanel() {
                 required
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            </fieldset>
+            <details className="rounded-xl border border-border/60 bg-surface/30 open:border-blue-500/30">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-text-primary [&::-webkit-details-marker]:hidden">
+                Detalles opcionales (marca, stock, variantes)
+              </summary>
+              <div className="grid gap-4 border-t border-border/60 px-4 pb-4 pt-3 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium text-text-primary">Marca</label>
                 <input
@@ -1255,14 +1286,11 @@ export function SellerOnboardingPanel() {
                 <label className="text-sm font-medium text-text-primary">Talla</label>
                 <input className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm" value={tallaProducto} onChange={(e) => setTallaProducto(e.target.value)} />
               </div>
+              </div>
+            </details>
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-bold uppercase tracking-wider text-text-muted">Imágenes</legend>
               <div className="sm:col-span-2 space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-text-primary">Imágenes del producto</label>
-                  <p className="mt-1 text-xs text-text-muted">
-                    Sube varias fotos (distintos frentes) desde tu equipo o pega URLs públicas; puedes combinar ambas
-                    (máx. {MAX_IMAGENES_PRODUCTO} en total). En producción conviene un CDN en lugar de data URLs.
-                  </p>
-                </div>
                 <input
                   ref={inputImagenesProductoRef}
                   type="file"
@@ -1323,18 +1351,18 @@ export function SellerOnboardingPanel() {
                   />
                 </div>
               </div>
-            </div>
+            </fieldset>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-black/90 disabled:opacity-50"
+              className="premium-button w-full sm:w-auto disabled:opacity-50"
             >
               Publicar producto
             </button>
             {productoOk ? <p className="text-sm font-medium text-success">{productoOk}</p> : null}
           </form>
-        )}
       </section>
+      ) : null}
 
       {loading ? (
         <p className="text-center text-sm text-text-muted" aria-live="polite">

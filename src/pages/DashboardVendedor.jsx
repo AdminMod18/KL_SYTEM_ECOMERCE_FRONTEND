@@ -1,48 +1,19 @@
 import { SellerOnboardingPanel } from '../components/SellerOnboardingPanel.jsx';
-import { motion } from 'framer-motion';
-import { TrendingUp } from 'lucide-react';
 
 export function DashboardVendedor() {
-  const stats = [
-    { label: 'Sales (7d)', value: '$12.4k', delta: '+8%', tone: 'text-success' },
-    { label: 'Orders', value: '128', delta: '+3%', tone: 'text-brand' },
-    { label: 'Conversion', value: '3.2%', delta: '+0.4pp', tone: 'text-success' },
-    { label: 'Returns', value: '1.1%', delta: '-0.2pp', tone: 'text-warning' },
-  ];
-
   return (
-    <div>
-      <header className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Seller</p>
-        <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
-          Panel de vendedor <span className="gradient-text">premium</span>
+    <div className="mx-auto max-w-4xl">
+      <header className="mb-8 text-center sm:text-left">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Vendedor</p>
+        <h1 className="mt-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
+          Activa tu tienda en <span className="gradient-text">Mercado</span>
         </h1>
-        <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-          Activa tu cuenta (solicitud + validacion + pago) y publica productos sin herramientas externas.
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-text-secondary sm:mx-0">
+          Sigue los pasos del flujo: solicitud, validación, pago y publicación. Solo verás la etapa en la que estás.
         </p>
       </header>
 
       <SellerOnboardingPanel />
-
-      <section className="mt-12">
-        <h2 className="mb-4 font-sans text-lg font-semibold text-text-primary">Resumen demo</h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {stats.map((s) => (
-            <motion.div
-              key={s.label}
-              whileHover={{ y: -4 }}
-              className="glass-panel premium-card-hover rounded-2xl p-5"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">{s.label}</p>
-              <p className="mt-3 inline-flex items-center gap-2 font-sans text-2xl font-semibold tabular-nums text-text-primary">
-                {s.value}
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-              </p>
-              <p className={`mt-1 text-sm font-semibold ${s.tone}`}>{s.delta}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
