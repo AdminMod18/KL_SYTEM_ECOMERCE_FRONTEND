@@ -51,6 +51,8 @@ jobs:
             echo "::error::Variable VITE_API_URL requerida para producción (URL del API Gateway / CloudFront /api)."
             exit 1
           fi
+          export VITE_ADMIN_URL="${VITE_ADMIN_URL:-${VITE_API_URL%/}/admin}"
+          export VITE_ANALYTICS_URL="${VITE_ANALYTICS_URL:-${VITE_API_URL%/}/analytics}"
           npm ci
           npm run build
 
