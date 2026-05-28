@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { CheckoutForm } from '../components/CheckoutForm.jsx';
 import { CheckoutPaymentPanel } from '../components/CheckoutPaymentPanel.jsx';
+import { CheckoutStepper } from '../components/CheckoutStepper.jsx';
 import { OrdenDesglosePanel } from '../components/OrdenDesglosePanel.jsx';
 import { createOrden } from '../services/orderService.js';
 import { saveCheckoutRecibo } from '../services/checkoutReciboStorage.js';
@@ -38,37 +39,9 @@ function buildLineasFromItems(items) {
   });
 }
 
-function StepIndicator({ phase }) {
-  const pedidoListo = phase !== CHECKOUT_PHASE.IDLE;
-  const pagoListo = false;
-  const pasoActivo = phase === CHECKOUT_PHASE.IDLE ? 0 : 1;
-
-  const steps = [
-    { key: 'pedido', label: 'Pedido', done: pedidoListo, active: pasoActivo === 0 },
-    { key: 'pago', label: 'Pago', done: pagoListo, active: pasoActivo === 1 },
-  ];
-
-  return (
-    <ol className="mb-8 flex flex-wrap items-center gap-2 text-xs font-medium text-text-muted sm:gap-4">
-      {steps.map((s, i) => {
-        const ring = s.done ? 'border-success bg-success/15 text-success' : s.active ? 'border-brand bg-brand-soft text-brand' : 'border-border bg-surface text-text-muted';
-        return (
-          <li key={s.key} className="flex items-center gap-2 sm:gap-4">
-            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[11px] ${ring}`}>
-              {s.done ? '✓' : i + 1}
-            </span>
-            <span className={s.active || s.done ? 'text-text-primary' : ''}>{s.label}</span>
-            {i < steps.length - 1 ? <span className="hidden text-text-muted sm:inline">→</span> : null}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
 export function Checkout() {
   const navigate = useNavigate();
-  const { username, displayName } = useAuth();
+  const { username, displayName, isAuthenticated } = useAuth();
   const { items, total, clear } = useCart();
   const [clienteId, setClienteId] = useState(() => username || 'cli-web-001');
   const [tipoEntrega, setTipoEntrega] = useState('DOMICILIO');
@@ -156,7 +129,7 @@ export function Checkout() {
   if (phase === CHECKOUT_PHASE.PAGO_PROCESANDO) {
     return (
       <div className="mx-auto max-w-md space-y-6 text-center">
-        <StepIndicator phase={phase} />
+        <CheckoutStepper current={2} />
         <div className="glass-panel rounded-2xl p-10 shadow-card">
           <div
             className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-brand border-t-transparent"
@@ -175,7 +148,7 @@ export function Checkout() {
     const ref = referenciaClienteOrden(orden.ordenId);
     return (
       <div className="mx-auto max-w-lg space-y-6">
-        <StepIndicator phase={phase} />
+        <CheckoutStepper current={2} />
         <div className="rounded-2xl border border-danger/40 bg-danger/10 px-5 py-4 text-sm text-danger">
           <p className="font-semibold">No se pudo completar el pago</p>
           <p className="mt-2 text-text-primary">{pagoError || 'Error desconocido.'}</p>
@@ -222,13 +195,11 @@ export function Checkout() {
   if (phase === CHECKOUT_PHASE.ORDEN_CREADA && orden) {
     return (
       <div className="space-y-8">
-        <StepIndicator phase={phase} />
+        <CheckoutStepper current={2} />
         <div>
-          <h1 className="mb-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Orden creada</h1>
+          <h1 className="mb-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Confirma el pago</h1>
           <p className="text-sm text-text-secondary">
-            Revisa el desglose. El total oficial es el del servidor. Elige método de pago y confirma (
-            <code className="text-xs">POST /pagos</code>
-            ): consignación simulada u ONLINE con <code className="text-xs">tokenPasarela</code>.
+            Tu pedido fue creado. Revisa el total oficial del servidor y elige cómo pagar.
           </p>
         </div>
         <div className="grid gap-8 lg:grid-cols-5">
@@ -295,17 +266,17 @@ export function Checkout() {
 
   return (
     <div>
-      <StepIndicator phase={phase} />
-      <h1 className="mb-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Checkout</h1>
+      <CheckoutStepper current={1} />
+      <h1 className="mb-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Verificar pedido</h1>
       <p className="mb-8 text-sm text-text-secondary">
-        Paso 1: <code className="text-xs">POST /orden</code> con el carrito. Paso 2: <code className="text-xs">POST /pagos</code> con monto =
-        total de la orden y referencia <code className="text-xs">ORDEN-{'{id}'}</code>.
+        Revisa tu carrito y los datos de entrega. En el siguiente paso confirmarás el pago.
       </p>
       <CheckoutForm
         items={items}
         total={total}
         clienteId={clienteId}
         onClienteIdChange={setClienteId}
+        clienteReadOnly={isAuthenticated && Boolean(username)}
         tipoEntrega={tipoEntrega}
         onTipoEntregaChange={setTipoEntrega}
         paisEnvio={paisEnvio}
@@ -317,8 +288,8 @@ export function Checkout() {
         onSubmit={handleCrearOrden}
         loading={isCreatingOrden}
         error={ordenError}
-        submitLabel="Crear orden"
-        loadingLabel="Creando orden…"
+        submitLabel="Crear pedido y continuar"
+        loadingLabel="Creando pedido…"
       />
     </div>
   );

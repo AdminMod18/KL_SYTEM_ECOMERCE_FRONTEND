@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { Navbar } from '../components/Navbar.jsx';
 import { Footer } from '../components/Footer.jsx';
 import { motion } from 'framer-motion';
@@ -17,8 +17,6 @@ function PageFallback() {
  * Layout único alineado al storefront (login/registro incluidos).
  */
 export function MainLayout() {
-  const location = useLocation();
-
   return (
     <div className="relative flex min-h-screen flex-col bg-mesh">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -37,14 +35,7 @@ export function MainLayout() {
       <main className="relative z-10 flex-1">
         <div className="mx-auto w-full max-w-wide px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           <Suspense fallback={<PageFallback />}>
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-            >
-              <Outlet />
-            </motion.div>
+            <Outlet />
           </Suspense>
         </div>
       </main>

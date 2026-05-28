@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { MapPin, Package, Truck, User } from 'lucide-react';
 import { formatMoney } from '../utils/formatMoney.js';
 
 export function CheckoutForm({
@@ -6,6 +7,7 @@ export function CheckoutForm({
   total,
   clienteId,
   onClienteIdChange,
+  clienteReadOnly = false,
   tipoEntrega,
   onTipoEntregaChange,
   paisEnvio,
@@ -17,16 +19,16 @@ export function CheckoutForm({
   onSubmit,
   loading,
   error,
-  submitLabel = 'Confirmar pedido',
-  loadingLabel = 'Procesando…',
+  submitLabel = 'Continuar al pago',
+  loadingLabel = 'Creando pedido…',
 }) {
   if (!items.length) {
     return (
       <div className="glass-panel rounded-2xl p-10 text-center shadow-card">
-        <h2 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Your cart is empty</h2>
-        <p className="mt-2 text-text-secondary">Add items before checkout.</p>
-        <Link to="/cart" className="mt-6 inline-flex rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground">
-          View cart
+        <h2 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Tu carrito está vacío</h2>
+        <p className="mt-2 text-text-secondary">Explora el catálogo y agrega productos antes de pagar.</p>
+        <Link to="/cart" className="premium-button mt-8 inline-flex rounded-xl px-6 py-3 text-sm font-semibold">
+          Ver carrito
         </Link>
       </div>
     );
@@ -34,79 +36,106 @@ export function CheckoutForm({
 
   return (
     <div className="grid gap-8 lg:grid-cols-5">
-      <div className="glass-panel rounded-2xl p-6 shadow-card lg:col-span-2">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">
-          Carrito (impuestos, comisión y envío los calcula el servidor según destino)
-        </h2>
-        <ul className="mt-4 space-y-3">
+      <aside className="glass-panel rounded-2xl p-6 shadow-card lg:col-span-2">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">
+          <Package className="h-3.5 w-3.5" />
+          Resumen
+        </p>
+        <h2 className="mt-2 font-sans text-lg font-semibold text-text-primary">Tu carrito</h2>
+        <p className="mt-1 text-xs text-text-muted">Impuestos, comisión y envío se calculan al crear el pedido.</p>
+        <ul className="mt-5 space-y-3">
           {items.map((p) => (
-            <li key={p.id} className="flex justify-between gap-3 text-sm">
+            <li key={p.id} className="flex justify-between gap-3 rounded-xl border border-border/60 bg-surface/30 px-3 py-3 text-sm">
               <span className="min-w-0 text-text-secondary">
                 <span className="font-medium text-text-primary">{p.nombre}</span>
-                <span className="block text-xs text-text-muted">
-                  SKU {p.sku} · cantidad {p.cantidad}
+                <span className="mt-0.5 block text-xs text-text-muted">
+                  SKU {p.sku} · ×{p.cantidad}
                 </span>
               </span>
-              <span className="shrink-0 font-medium tabular-nums text-text-primary">
+              <span className="shrink-0 font-semibold tabular-nums text-text-primary">
                 {formatMoney(Number(p.precio) * p.cantidad)}
               </span>
             </li>
           ))}
         </ul>
         <div className="mt-6 border-t border-border pt-4">
-          <p className="text-xs text-text-muted">Subtotal carrito (referencia; el total oficial lo devuelve el servidor tras impuestos, comisión y envío).</p>
-          <p className="mt-2 flex justify-between text-base font-bold text-text-primary">
-            <span>Subtotal</span>
+          <p className="flex justify-between text-base font-bold text-text-primary">
+            <span>Subtotal referencia</span>
             <span className="tabular-nums">{formatMoney(total)}</span>
           </p>
         </div>
-      </div>
+      </aside>
 
       <form onSubmit={onSubmit} className="glass-panel rounded-2xl p-6 shadow-card lg:col-span-3">
-        <h2 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Order details</h2>
-        <p className="mt-1 text-sm text-text-secondary">
-          En este paso solo se envía <code className="rounded bg-page px-1.5 py-0.5 text-xs">POST /orden</code>. El pago se confirma en el
-          siguiente paso.
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">
+          <MapPin className="h-3.5 w-3.5" />
+          Entrega
         </p>
-        {error && (
-          <div className="mt-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
-        )}
-        <div className="mt-6">
-          <label className="text-sm font-medium text-text-primary">ID de cliente</label>
-          <input
-            className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-            value={clienteId}
-            onChange={(e) => onClienteIdChange(e.target.value)}
-            required
-          />
-          <p className="mt-1 text-xs text-text-muted">Debe coincidir con el usuario del JWT (<code className="text-[11px]">sub</code>) para ver el historial en «Mis pedidos».</p>
-        </div>
-        <fieldset className="mt-4">
-          <legend className="text-sm font-medium text-text-primary">Tipo de entrega (HU-20)</legend>
-          <div className="mt-2 flex flex-wrap gap-4 text-sm text-text-primary">
-            <label className="inline-flex cursor-pointer items-center gap-2">
+        <h2 className="mt-2 font-sans text-xl font-semibold text-text-primary md:text-2xl">Datos del pedido</h2>
+        <p className="mt-1 text-sm text-text-secondary">Revisa la entrega y confirma para generar tu orden.</p>
+
+        {error ? (
+          <div className="mt-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
+            {error}
+          </div>
+        ) : null}
+
+        <fieldset className="mt-6 space-y-2">
+          <legend className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <User className="h-4 w-4 text-text-muted" />
+            Cliente
+          </legend>
+          {clienteReadOnly ? (
+            <div className="mt-2 rounded-xl border border-border/60 bg-surface/40 px-4 py-3">
+              <p className="text-sm font-semibold text-text-primary">{clienteId}</p>
+              <p className="mt-1 text-xs text-text-muted">Vinculado a tu sesión para el historial en Mis pedidos.</p>
+            </div>
+          ) : (
+            <>
               <input
-                type="radio"
-                name="tipoEntrega"
-                checked={tipoEntrega === 'DOMICILIO'}
-                onChange={() => onTipoEntregaChange('DOMICILIO')}
+                className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+                value={clienteId}
+                onChange={(e) => onClienteIdChange(e.target.value)}
+                required
               />
-              Domicilio
-            </label>
-            <label className="inline-flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="tipoEntrega"
-                checked={tipoEntrega === 'RECOGIDA'}
-                onChange={() => onTipoEntregaChange('RECOGIDA')}
-              />
-              Recogida en punto
-            </label>
+              <p className="text-xs text-text-muted">Debe coincidir con tu usuario para ver el pedido después.</p>
+            </>
+          )}
+        </fieldset>
+
+        <fieldset className="mt-6">
+          <legend className="flex items-center gap-2 text-sm font-medium text-text-primary">
+            <Truck className="h-4 w-4 text-text-muted" />
+            Tipo de entrega
+          </legend>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[
+              { value: 'DOMICILIO', label: 'Domicilio', hint: 'Envío a tu dirección' },
+              { value: 'RECOGIDA', label: 'Recogida', hint: 'Punto de entrega' },
+            ].map((opt) => {
+              const active = tipoEntrega === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onTipoEntregaChange(opt.value)}
+                  className={`rounded-xl border px-4 py-3 text-left transition ${
+                    active
+                      ? 'border-blue-500/40 bg-blue-500/10'
+                      : 'border-border-strong bg-surface/30 hover:border-blue-500/25'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-text-primary">{opt.label}</p>
+                  <p className="mt-0.5 text-xs text-text-muted">{opt.hint}</p>
+                </button>
+              );
+            })}
           </div>
         </fieldset>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="text-sm font-medium text-text-primary">Dirección de envío</label>
+            <label className="text-sm font-medium text-text-primary">Dirección</label>
             <input
               className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
               value={direccionEnvio}
@@ -129,15 +158,12 @@ export function CheckoutForm({
               className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
               value={ciudadEnvio}
               onChange={(e) => onCiudadEnvioChange(e.target.value)}
-              placeholder="Bogotá (envío local) / Medellín (nacional CO)"
+              placeholder="Bogotá, Medellín…"
             />
           </div>
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-6 w-full rounded-xl bg-success py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:opacity-50"
-        >
+
+        <button type="submit" disabled={loading} className="premium-button mt-8 w-full disabled:opacity-50 sm:w-auto">
           {loading ? loadingLabel : submitLabel}
         </button>
       </form>

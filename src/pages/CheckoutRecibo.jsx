@@ -1,13 +1,13 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { CheckCircle2, Receipt } from 'lucide-react';
+import { CheckoutStepper } from '../components/CheckoutStepper.jsx';
 import { OrdenDesglosePanel } from '../components/OrdenDesglosePanel.jsx';
 import { PagoExitoPanel } from '../components/PagoExitoPanel.jsx';
 import { clearCheckoutRecibo, readCheckoutRecibo, saveCheckoutRecibo } from '../services/checkoutReciboStorage.js';
-import { motion } from 'framer-motion';
+import { formatMoney } from '../utils/formatMoney.js';
 
 /**
- * Lee recibo en el primer frame: primero el state del router, luego sessionStorage
- * (se escribe en Checkout antes de navegar — así no hay pantalla vacía hasta el effect).
  * @param {import('react-router-dom').Location} loc
  */
 function loadReceiptSnapshot(loc) {
@@ -25,19 +25,22 @@ function loadReceiptSnapshot(loc) {
 export function CheckoutRecibo() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const datos = useMemo(() => loadReceiptSnapshot(location), [location]);
+  const [datos, setDatos] = useState(() => loadReceiptSnapshot(location));
 
   useEffect(() => {
-    const st = location.state;
-    if (st && typeof st === 'object' && st.orden != null) {
-      saveCheckoutRecibo({
-        orden: st.orden,
-        pago: st.pago,
-        referenciaCliente: st.referenciaCliente ?? '',
-      });
+    const snapshot = loadReceiptSnapshot(location);
+    if (snapshot) {
+      setDatos(snapshot);
+      const st = location.state;
+      if (st && typeof st === 'object' && st.orden != null) {
+        saveCheckoutRecibo({
+          orden: st.orden,
+          pago: st.pago,
+          referenciaCliente: st.referenciaCliente ?? '',
+        });
+      }
     }
-  }, [location.state]);
+  }, [location]);
 
   const orden = datos?.orden ?? null;
   const pago = datos?.pago ?? null;
@@ -50,58 +53,78 @@ export function CheckoutRecibo() {
 
   if (!orden) {
     return (
-      <div className="glass-panel mx-auto max-w-lg space-y-6 rounded-2xl p-8 text-center">
-        <h1 className="font-sans text-2xl font-bold text-text-primary">Sin recibo</h1>
-        <p className="text-sm text-text-secondary">
-          No hay datos de un pago reciente. Si acabas de pagar, vuelve al checkout o revisa tu historial en{' '}
-          <Link to="/cuenta/pedidos" className="font-semibold text-cart-badge hover:underline">
-            Mis pedidos
+      <div className="mx-auto max-w-lg space-y-6">
+        <CheckoutStepper current={2} />
+        <div className="glass-panel rounded-2xl p-8 text-center shadow-card">
+          <Receipt className="mx-auto h-12 w-12 text-text-muted" aria-hidden />
+          <h1 className="mt-4 font-sans text-2xl font-bold text-text-primary">Sin recibo disponible</h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            No encontramos un pago reciente. Si acabas de comprar, revisa{' '}
+            <Link to="/cuenta/pedidos" className="font-semibold text-brand hover:underline">
+              Mis pedidos
+            </Link>
+            .
+          </p>
+          <Link to="/checkout" className="premium-button mt-6 inline-flex rounded-xl px-6 py-3 text-sm font-semibold">
+            Ir al checkout
           </Link>
-          .
-        </p>
-        <Link to="/checkout" className="inline-flex rounded-xl bg-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-black/90">
-          Ir al checkout
-        </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mx-auto max-w-lg space-y-6"
-    >
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Pago completado</p>
-        <h1 className="mt-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Recibo</h1>
-        <p className="mt-2 text-sm text-text-secondary">Guarda esta referencia para cualquier consulta sobre tu compra.</p>
-      </header>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <CheckoutStepper current={2} pagoCompleto />
 
-      <PagoExitoPanel pago={pago} referenciaCliente={referenciaCliente} />
+      <div className="glass-panel overflow-hidden rounded-2xl shadow-card">
+        <div className="border-b border-emerald-500/25 bg-emerald-500/10 px-6 py-8 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
+            <CheckCircle2 className="h-9 w-9 text-emerald-500" aria-hidden />
+          </div>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+            Pago completado
+          </p>
+          <h1 className="mt-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
+            ¡Gracias por tu compra!
+          </h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            Orden <span className="font-mono font-semibold text-text-primary">#{orden.ordenId}</span>
+            {referenciaCliente ? (
+              <>
+                {' '}
+                · Ref. <span className="font-mono">{referenciaCliente}</span>
+              </>
+            ) : null}
+          </p>
+          {orden.total != null ? (
+            <p className="mt-4 font-sans text-3xl font-bold tabular-nums text-text-primary">
+              {formatMoney(orden.total)}
+            </p>
+          ) : null}
+        </div>
 
-      <div className="glass-panel rounded-2xl border-emerald-500/25 bg-success/5 px-5 py-4 text-sm text-text-primary">
-        <p className="font-semibold text-text-primary">Pedido confirmado</p>
-        <p className="mt-1 text-text-secondary">Desglose de la orden (order-service):</p>
+        <div className="space-y-6 p-6">
+          <PagoExitoPanel pago={pago} referenciaCliente={referenciaCliente} />
+          <OrdenDesglosePanel orden={orden} />
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={handleContinuar}
+              className="premium-button flex-1 rounded-xl py-3 text-sm font-semibold"
+            >
+              Volver al inicio
+            </button>
+            <Link
+              to="/cuenta/pedidos"
+              className="flex flex-1 items-center justify-center rounded-xl border border-border-strong py-3 text-center text-sm font-semibold text-text-primary transition hover:border-brand"
+            >
+              Ver mis pedidos
+            </Link>
+          </div>
+        </div>
       </div>
-
-      <OrdenDesglosePanel orden={orden} />
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={handleContinuar}
-          className="flex-1 rounded-xl bg-black py-3 text-sm font-semibold text-white transition hover:bg-black/90"
-        >
-          Volver al inicio
-        </button>
-        <Link
-          to="/cuenta/pedidos"
-          className="flex flex-1 items-center justify-center rounded-xl border border-border-strong py-3 text-center text-sm font-semibold text-text-primary transition hover:border-brand"
-        >
-          Ver mis pedidos
-        </Link>
-      </div>
-    </motion.div>
+    </div>
   );
 }
