@@ -98,10 +98,7 @@ export function Navbar({ variant = 'storefront' }) {
           ) : (
             <>
               <NavLink to="/catalog" className={navClass}>
-                Almacenar
-              </NavLink>
-              <NavLink to="/catalog" className={navClass}>
-                Explorar
+                Catálogo
               </NavLink>
               <NavLink to="/become-seller" className={navClass}>
                 Vender
@@ -278,10 +275,7 @@ export function Navbar({ variant = 'storefront' }) {
             ) : (
               <>
                 <NavLink to="/catalog" className={navClass} onClick={() => setOpen(false)}>
-                  Almacenar
-                </NavLink>
-                <NavLink to="/catalog" className={navClass} onClick={() => setOpen(false)}>
-                  Explorar
+                  Catálogo
                 </NavLink>
                 <NavLink to="/become-seller" className={navClass} onClick={() => setOpen(false)}>
                   Vender
