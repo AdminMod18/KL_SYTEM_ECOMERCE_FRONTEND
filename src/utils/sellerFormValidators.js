@@ -203,7 +203,8 @@ const CATEGORIA_MAX = 120;
  *   nombre: string;
  *   precio: string | number;
  *   descripcion: string;
- *   categoriasTexto: string;
+ *   categorias?: string[];
+ *   categoriasTexto?: string;
  *   marca?: string;
  *   subcategoria?: string;
  *   color?: string;
@@ -230,11 +231,13 @@ export function validarFormularioProductoVendedor(p) {
   if (!desc) return 'Descripción: es obligatoria.';
   if (desc.length > 500) return 'Descripción: máximo 500 caracteres.';
 
-  const categorias = String(p.categoriasTexto ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (!categorias.length) return 'Categorías: indique al menos una, separadas por coma.';
+  const categorias = Array.isArray(p.categorias)
+    ? p.categorias.map((s) => String(s ?? '').trim()).filter(Boolean)
+    : String(p.categoriasTexto ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+  if (!categorias.length) return 'Categorías: seleccione categoría, subcategoría y tipo.';
   for (let i = 0; i < categorias.length; i += 1) {
     const c = categorias[i];
     if (c.length > CATEGORIA_MAX) {

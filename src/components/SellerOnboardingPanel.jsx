@@ -10,6 +10,8 @@ import {
 import { refreshSession, sincronizarVendedorDesdeSolicitud } from '../services/authService.js';
 import { FORMATOS_LEGALES_VENDEDOR } from '../data/marketplaceContent.js';
 import { createProducto } from '../services/productService.js';
+import { findUsuarioByIdentity } from '../services/userService.js';
+import { buildCategoriasFromSelection } from '../data/productCategories.js';
 import {
   SELLER_SESSION_CHANGED,
   clearSellerSolicitudIdSession,
@@ -33,6 +35,8 @@ import { Check, CreditCard, FileText, Package, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js';
 import { recoverSellerSolicitudSession } from '../auth/sellerRecover.js';
 import { SellerActivationPayment } from './SellerActivationPayment.jsx';
+import { SellerInventoryPanel } from './SellerInventoryPanel.jsx';
+import { CategorySelectGroup } from './CategorySelectGroup.jsx';
 
 /** Límite por archivo (PDF o imagen); el cuerpo JSON crece ~4/3 por Base64. */
 const MAX_BYTES_ADJUNTO = 3 * 1024 * 1024;
@@ -123,7 +127,7 @@ const ONBOARDING_STEPS = [
   { id: 1, label: 'Solicitud', icon: FileText },
   { id: 2, label: 'Validación', icon: ShieldCheck },
   { id: 3, label: 'Activación', icon: CreditCard },
-  { id: 4, label: 'Publicar', icon: Package },
+  { id: 4, label: 'Inventario', icon: Package },
 ];
 
 function resolveActiveStep(solicitudId, estado, onboardingBloqueado) {
@@ -233,7 +237,9 @@ export function SellerOnboardingPanel() {
   const [nombreProducto, setNombreProducto] = useState('');
   const [precioProducto, setPrecioProducto] = useState('');
   const [descripcionProducto, setDescripcionProducto] = useState('');
-  const [categoriasProducto, setCategoriasProducto] = useState('Tecnologia, Computadores, Portatiles');
+  const [categoriaMainId, setCategoriaMainId] = useState('');
+  const [categoriaSubId, setCategoriaSubId] = useState('');
+  const [categoriaLine, setCategoriaLine] = useState('');
   const [marcaProducto, setMarcaProducto] = useState('');
   const [subcategoriaProducto, setSubcategoriaProducto] = useState('');
   const [originalidadProducto, setOriginalidadProducto] = useState('');
@@ -253,6 +259,9 @@ export function SellerOnboardingPanel() {
   const [syncRolMsg, setSyncRolMsg] = useState('');
   const [syncRolLoading, setSyncRolLoading] = useState(false);
   const [validacionOk, setValidacionOk] = useState('');
+  const [vistaInventario, setVistaInventario] = useState('inventario');
+  const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
+  const [autofillPerfilMsg, setAutofillPerfilMsg] = useState('');
 
   const aplicarSolicitudEnFormulario = useCallback((s) => {
     setSolicitud(s);
@@ -346,6 +355,68 @@ export function SellerOnboardingPanel() {
   useEffect(() => {
     setArchivosAdjuntos({});
   }, [tipoPersona]);
+
+  /** Rellena fase 1 con datos del perfil de comprador (solo campos vacíos). */
+  const autofillPerfilDoneRef = useRef(false);
+  useEffect(() => {
+    if (solicitudId || !isAuthenticated || autofillPerfilDoneRef.current) return;
+    let cancel = false;
+    (async () => {
+      const profile = await findUsuarioByIdentity({ username, email: email ?? correoElectronico });
+      if (cancel || !profile) return;
+      autofillPerfilDoneRef.current = true;
+      const filled = [];
+      if (!nombres.trim() && profile.nombres?.trim()) {
+        setNombres(profile.nombres.trim());
+        filled.push('nombres');
+      }
+      if (!apellidos.trim() && profile.apellidos?.trim()) {
+        setApellidos(profile.apellidos.trim());
+        filled.push('apellidos');
+      }
+      if (!documentoIdentidad.trim() && profile.documentoIdentidad?.trim()) {
+        setDocumentoIdentidad(profile.documentoIdentidad.trim());
+        filled.push('documento');
+      }
+      if (!correoElectronico.trim() && (profile.email ?? email)?.trim()) {
+        setCorreoElectronico(String(profile.email ?? email).trim());
+        filled.push('correo');
+      }
+      if (!telefono.trim() && profile.telefono?.trim()) {
+        setTelefono(profile.telefono.trim());
+        filled.push('teléfono');
+      }
+      if (!paisResidencia.trim() && profile.paisResidencia?.trim()) {
+        setPaisResidencia(profile.paisResidencia.trim());
+        filled.push('país');
+      }
+      if (!ciudadResidencia.trim() && profile.ciudadResidencia?.trim()) {
+        setCiudadResidencia(profile.ciudadResidencia.trim());
+        filled.push('ciudad');
+      }
+      if (profile.tipoPersona === 'JURIDICA') {
+        setTipoPersona('JURIDICA');
+      }
+      if (filled.length) {
+        setAutofillPerfilMsg(`Datos de tu cuenta aplicados: ${filled.join(', ')}.`);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [
+    solicitudId,
+    isAuthenticated,
+    username,
+    email,
+    nombres,
+    apellidos,
+    documentoIdentidad,
+    correoElectronico,
+    telefono,
+    paisResidencia,
+    ciudadResidencia,
+  ]);
 
   /** Si el id en sessionStorage cambia (crear solicitud, sync auth, otra pestaña misma ventana), vuelve a cargar. */
   useEffect(() => {
@@ -686,11 +757,16 @@ export function SellerOnboardingPanel() {
     if (!solicitudId) return;
     setError('');
     setProductoOk('');
+    const categorias = buildCategoriasFromSelection({
+      mainId: categoriaMainId,
+      subId: categoriaSubId,
+      line: categoriaLine,
+    });
     const errProd = validarFormularioProductoVendedor({
       nombre: nombreProducto,
       precio: precioProducto,
       descripcion: descripcionProducto,
-      categoriasTexto: categoriasProducto,
+      categorias,
       marca: marcaProducto,
       subcategoria: subcategoriaProducto,
       color: colorProducto,
@@ -703,10 +779,6 @@ export function SellerOnboardingPanel() {
       setError(errProd);
       return;
     }
-    const categorias = categoriasProducto
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
     const desdeTexto = parseImagenesUrlsCadena(imagenesUrlsProducto);
     const desdeArchivo = imagenesArchivoItems.map((x) => x.dataUrl);
     const imagenesUrls = [...desdeArchivo, ...desdeTexto];
@@ -742,9 +814,14 @@ export function SellerOnboardingPanel() {
       if (imagenesUrls.length) payload.imagenesUrls = imagenesUrls;
       await createProducto(payload);
       setProductoOk('Producto publicado correctamente.');
+      setInventoryRefreshKey((k) => k + 1);
+      setVistaInventario('inventario');
       setNombreProducto('');
       setPrecioProducto('');
       setDescripcionProducto('');
+      setCategoriaMainId('');
+      setCategoriaSubId('');
+      setCategoriaLine('');
       setImagenesUrlsProducto('');
       setImagenesArchivoItems([]);
     } catch (err) {
@@ -779,6 +856,9 @@ export function SellerOnboardingPanel() {
     setTiendaActivaMsg(false);
     setProductoOk('');
     setValidacionOk('');
+    setAutofillPerfilMsg('');
+    setVistaInventario('inventario');
+    autofillPerfilDoneRef.current = false;
     setImagenesUrlsProducto('');
     setImagenesArchivoItems([]);
     setNombreVendedor('');
@@ -903,6 +983,11 @@ export function SellerOnboardingPanel() {
           <p className="mt-1 text-sm text-text-secondary">
             Datos personales y documentos requeridos. PDF o imagen, máx. {Math.round(MAX_BYTES_ADJUNTO / (1024 * 1024))} MB c/u.
           </p>
+          {autofillPerfilMsg ? (
+            <p className="mt-3 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-xs text-blue-900 dark:text-blue-100">
+              {autofillPerfilMsg}
+            </p>
+          ) : null}
             <details className="group mt-5 rounded-xl border border-border/60 bg-surface/30 open:border-blue-500/30 open:bg-blue-500/5">
             <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-text-primary [&::-webkit-details-marker]:hidden">
               Plantillas legales (opcional: descargar antes de subir)
@@ -1195,14 +1280,48 @@ export function SellerOnboardingPanel() {
       ) : null}
 
       {activeStep === 4 && puedePublicar ? (
-        <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+        <div className="space-y-6">
           {vencimientoSuscripcion ? (
-            <p className="mb-4 rounded-xl border border-border/60 bg-surface/40 px-4 py-3 text-xs text-text-secondary">
+            <p className="rounded-xl border border-border/60 bg-surface/40 px-4 py-3 text-xs text-text-secondary">
               Suscripción activa{vencimientoSuscripcion ? ` · próximo vencimiento: ${formatFechaVencimiento(vencimientoSuscripcion)}` : ''}.
             </p>
           ) : null}
-        <h3 className="font-sans text-base font-semibold text-text-primary">Publica tu primer producto</h3>
-        <p className="mt-1 text-sm text-text-secondary">Tu tienda está activa. Completa los datos esenciales y publica.</p>
+
+          <div className="flex flex-wrap gap-2 rounded-xl border border-border/60 bg-surface/30 p-1">
+            <button
+              type="button"
+              onClick={() => setVistaInventario('inventario')}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                vistaInventario === 'inventario'
+                  ? 'bg-brand text-brand-foreground shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Inventario
+            </button>
+            <button
+              type="button"
+              onClick={() => setVistaInventario('publicar')}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                vistaInventario === 'publicar'
+                  ? 'bg-brand text-brand-foreground shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Publicar producto
+            </button>
+          </div>
+
+          {vistaInventario === 'inventario' ? (
+            <SellerInventoryPanel
+              vendedorSolicitudId={solicitudId}
+              refreshKey={inventoryRefreshKey}
+              onPublicarClick={() => setVistaInventario('publicar')}
+            />
+          ) : (
+        <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+        <h3 className="font-sans text-base font-semibold text-text-primary">Publicar producto</h3>
+        <p className="mt-1 text-sm text-text-secondary">Completa los datos esenciales y añade un artículo a tu catálogo.</p>
           <form onSubmit={handleCrearProducto} className="mt-6 space-y-6">
             <fieldset className="space-y-4">
               <legend className="text-xs font-bold uppercase tracking-wider text-text-muted">Información básica</legend>
@@ -1238,12 +1357,21 @@ export function SellerOnboardingPanel() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-text-primary">Categorias (coma)</label>
-              <input
-                className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                value={categoriasProducto}
-                onChange={(e) => setCategoriasProducto(e.target.value)}
-                required
+              <label className="text-sm font-medium text-text-primary">Categorías</label>
+              <CategorySelectGroup
+                mainId={categoriaMainId}
+                subId={categoriaSubId}
+                line={categoriaLine}
+                onMainChange={(id) => {
+                  setCategoriaMainId(id);
+                  setCategoriaSubId('');
+                  setCategoriaLine('');
+                }}
+                onSubChange={(id) => {
+                  setCategoriaSubId(id);
+                  setCategoriaLine('');
+                }}
+                onLineChange={setCategoriaLine}
               />
             </div>
             </fieldset>
@@ -1400,6 +1528,8 @@ export function SellerOnboardingPanel() {
             {productoOk ? <p className="text-sm font-medium text-success">{productoOk}</p> : null}
           </form>
       </section>
+          )}
+        </div>
       ) : null}
 
       {loading ? (
