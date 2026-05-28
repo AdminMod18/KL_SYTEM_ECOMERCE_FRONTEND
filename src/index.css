@@ -78,15 +78,25 @@
     radial-gradient(circle at 50% 120%, rgba(56, 189, 248, 0.2), transparent 45%);
 }
 
-.dark .bg-page {
-  background-color: #030712 !important;
+.dark :focus-visible {
+  @apply ring-white ring-offset-slate-950;
+}
+
+.dark .bg-page,
+.dark [class*='bg-page'] {
+  background-color: #0f172a !important;
 }
 
 .dark .bg-surface,
+.dark [class*='bg-surface'],
 .dark .bg-surface-muted,
-.dark .glass-panel {
-  background-color: rgba(15, 23, 42, 0.72) !important;
-  border-color: rgba(148, 163, 184, 0.2) !important;
+.dark [class*='bg-surface-muted'],
+.dark .glass-panel,
+.dark .bg-white,
+.dark [class*='bg-white'],
+.dark .bg-search-field {
+  background-color: rgba(15, 23, 42, 0.88) !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
 }
 
 .dark .text-text-primary {
@@ -102,12 +112,22 @@
 }
 
 .dark .border-border,
-.dark .border-border-strong {
-  border-color: rgba(148, 163, 184, 0.2) !important;
+.dark .border-border-strong,
+.dark [class*='border-border'] {
+  border-color: rgba(148, 163, 184, 0.22) !important;
 }
 
-.dark .bg-search-field,
-.dark .bg-white {
-  background-color: rgba(15, 23, 42, 0.9) !important;
-  color: #f8fafc !important;
+.dark input,
+.dark textarea,
+.dark select {
+  color: #f8fafc;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+.dark .glass-panel {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }

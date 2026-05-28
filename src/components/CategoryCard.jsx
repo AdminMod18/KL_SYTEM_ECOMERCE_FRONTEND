@@ -12,7 +12,7 @@ export function CategoryCard({ title, description, to }) {
       to={to}
       className="group premium-card-hover flex flex-col rounded-2xl border border-border bg-surface/90 p-6 shadow-card backdrop-blur"
     >
-      <h3 className="font-sans text-xl font-semibold tracking-tight text-text-primary group-hover:text-black">{title}</h3>
+      <h3 className="font-sans text-xl font-semibold tracking-tight text-text-primary group-hover:text-brand">{title}</h3>
       {description && <p className="mt-2 text-sm leading-relaxed text-text-secondary">{description}</p>}
       <span className="mt-4 inline-flex items-center text-xs font-semibold uppercase tracking-wider text-text-muted transition group-hover:text-brand">
         Browse

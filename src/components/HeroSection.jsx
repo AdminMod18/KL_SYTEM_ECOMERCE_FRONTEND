@@ -5,7 +5,7 @@ import { Sparkles } from 'lucide-react';
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/30 bg-white/55 px-4 py-16 text-center shadow-card backdrop-blur-xl sm:px-6 sm:py-20 lg:py-24">
+    <section className="relative overflow-hidden rounded-[2rem] border border-white/30 bg-white/55 px-4 py-16 text-center shadow-card backdrop-blur-xl dark:border-slate-700/40 dark:bg-slate-900/60 sm:px-6 sm:py-20 lg:py-24">
       <motion.div
         className="pointer-events-none absolute -right-10 top-0 h-56 w-56 rounded-full bg-violet-400/30 blur-3xl"
         animate={{ scale: [1, 1.05, 1], opacity: [0.6, 0.8, 0.6] }}
@@ -51,7 +51,7 @@ export function HeroSection() {
           </Link>
           <Link
             to="/catalog"
-            className="inline-flex items-center justify-center rounded-full border border-black bg-transparent px-8 py-3.5 text-sm font-semibold text-text-primary transition hover:bg-black/[0.03]"
+            className="inline-flex items-center justify-center rounded-full border border-black bg-transparent px-8 py-3.5 text-sm font-semibold text-text-primary transition hover:bg-black/[0.03] dark:border-white/30 dark:hover:bg-white/10"
           >
             {HERO.secondaryCta}
           </Link>
