@@ -2,7 +2,7 @@
  * Copy y taxonomía alineados al prototipo Figma Make:
  * https://foil-peanut-77989849.figma.site/
  */
-export const SITE_NAME = 'Mercado';
+export const SITE_NAME = 'KL-ECOMMERCE';
 
 export const HERO = {
   eyebrow: 'Introducing our Premium Collection',
