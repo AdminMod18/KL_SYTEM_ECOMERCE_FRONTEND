@@ -16,7 +16,7 @@ export function Filters({
   const idSearch = useId();
 
   return (
-    <aside className="rounded-2xl border border-border bg-surface p-5 shadow-card lg:sticky lg:top-24">
+    <aside className="glass-panel rounded-2xl p-5 lg:sticky lg:top-24">
       <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Filters</h2>
 
       <div className="mt-5">
@@ -29,7 +29,7 @@ export function Filters({
           value={busqueda}
           onChange={(e) => onBusqueda(e.target.value)}
           placeholder="Name or description…"
-          className="mt-2 w-full rounded-xl border border-border-strong bg-page px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition focus:border-brand focus:ring-2 focus:ring-brand/25"
+          className="mt-2 w-full rounded-xl border border-border-strong bg-page px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
 
@@ -40,12 +40,12 @@ export function Filters({
             const checked = selectedCategories.includes(c);
             return (
               <li key={c}>
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition hover:bg-white/5">
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition hover:bg-blue-500/10">
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => onToggleCategory(c)}
-                    className="h-4 w-4 rounded border-border-strong bg-page text-brand focus:ring-brand"
+                    className="h-4 w-4 rounded border-border-strong bg-page text-brand focus:ring-blue-500"
                   />
                   <span>{c}</span>
                 </label>
@@ -68,7 +68,7 @@ export function Filters({
               min={0}
               value={precioMin}
               onChange={(e) => onPrecioMin(Number(e.target.value))}
-              className="w-full rounded-xl border border-border-strong bg-page px-3 py-2 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+              className="w-full rounded-xl border border-border-strong bg-page px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
           <div>
@@ -81,7 +81,7 @@ export function Filters({
               min={0}
               value={precioMax}
               onChange={(e) => onPrecioMax(Number(e.target.value))}
-              className="w-full rounded-xl border border-border-strong bg-page px-3 py-2 text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
+              className="w-full rounded-xl border border-border-strong bg-page px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
         </div>

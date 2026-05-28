@@ -4,7 +4,7 @@ import { initialsFromProfile } from '../utils/jwtPayload.js';
 
 const sidebarLinkClass = ({ isActive }) =>
   `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-    isActive ? 'bg-black text-white' : 'text-text-secondary hover:bg-page hover:text-text-primary'
+    isActive ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' : 'text-text-secondary hover:bg-page hover:text-text-primary'
   }`;
 
 const tabClass = ({ isActive }) =>
@@ -66,10 +66,10 @@ export function CuentaLayout() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8 pb-12 lg:flex-row lg:items-start lg:gap-10">
       <aside className="w-full shrink-0 lg:w-64">
-        <div className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+        <div className="glass-panel rounded-2xl p-6 shadow-card">
           <div className="flex flex-col items-center text-center lg:items-stretch lg:text-left">
             <div
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-lg font-semibold text-white"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-semibold text-white shadow-lg shadow-blue-500/25"
               aria-hidden
             >
               {initials}

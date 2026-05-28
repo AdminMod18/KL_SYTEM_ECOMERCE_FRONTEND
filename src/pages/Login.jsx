@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { login as loginRequest } from '../services/authService.js';
 import { SITE_NAME } from '../data/marketplaceContent.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
+import { motion } from 'framer-motion';
+import { LockKeyhole } from 'lucide-react';
 
 const inputClass =
   'mt-2 w-full rounded-full border-0 bg-search-field px-5 py-3 text-sm text-text-primary placeholder:text-text-muted shadow-inner ring-1 ring-inset ring-black/[0.06] focus:outline-none focus:ring-2 focus:ring-cart-badge/35';
@@ -38,16 +40,22 @@ export function Login() {
   }
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-2 lg:gap-14">
-      <div className="hidden flex-col justify-center rounded-2xl border border-border bg-surface p-10 shadow-card lg:flex">
+    <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-2 lg:gap-14">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="bg-mesh hidden flex-col justify-center rounded-3xl border border-white/40 bg-surface p-10 shadow-card lg:flex"
+      >
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-badge-text">{SITE_NAME}</p>
-        <h1 className="mt-4 font-sans text-4xl font-bold tracking-tight text-text-primary md:text-5xl">Welcome back</h1>
+        <h1 className="mt-4 font-sans text-4xl font-bold tracking-tight text-text-primary md:text-5xl">
+          Welcome back <span className="gradient-text">builder</span>
+        </h1>
         <p className="mt-4 text-lead text-text-secondary">
           Sign in to continue shopping premium technology curated for you.
         </p>
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
         <div className="lg:hidden">
           <h1 className="font-sans text-3xl font-bold tracking-tight text-text-primary">Welcome back</h1>
           <p className="mt-2 text-sm text-text-secondary">Sign in to your account</p>
@@ -57,7 +65,11 @@ export function Login() {
           <p className="mt-2 text-sm text-text-secondary">Enter your credentials below.</p>
         </div>
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-5 rounded-2xl border border-border bg-surface p-8 shadow-card">
+        <form onSubmit={onSubmit} className="glass-panel mt-8 space-y-5 rounded-3xl p-8">
+          <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
+            <LockKeyhole className="h-3.5 w-3.5" />
+            Secure login
+          </div>
           {error && (
             <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
           )}
@@ -122,7 +134,7 @@ export function Login() {
           </p>
           <p className="text-center text-xs text-text-muted">Demo: admin / admin123</p>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

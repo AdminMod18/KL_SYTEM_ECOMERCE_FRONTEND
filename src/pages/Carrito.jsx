@@ -8,12 +8,12 @@ export function Carrito() {
 
   if (!items.length) {
     return (
-      <div className="rounded-2xl border border-border bg-surface p-12 text-center shadow-card">
+      <div className="glass-panel rounded-2xl p-12 text-center shadow-card">
         <h1 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Your cart is empty</h1>
         <p className="mt-2 text-text-secondary">Explore the catalog and add products.</p>
         <Link
           to="/catalog"
-          className="mt-8 inline-flex rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition hover:bg-brand-hover"
+          className="premium-button mt-8 inline-flex rounded-xl px-6 py-3 text-sm font-semibold text-brand-foreground"
         >
           Browse catalog
         </Link>
@@ -43,7 +43,7 @@ export function Carrito() {
         ))}
       </div>
 
-      <div className="mt-8 flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6 shadow-card sm:flex-row sm:items-center sm:justify-between">
+      <div className="glass-panel mt-8 flex flex-col gap-4 rounded-2xl p-6 shadow-card sm:flex-row sm:items-center sm:justify-between">
         <p className="text-lg font-bold text-text-primary">
           Total: <span className="text-brand">{formatMoney(total)}</span>
         </p>

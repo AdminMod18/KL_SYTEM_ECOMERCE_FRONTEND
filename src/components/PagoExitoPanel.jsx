@@ -20,7 +20,7 @@ export function PagoExitoPanel({ pago, referenciaCliente }) {
   const esObjeto = pago != null && typeof pago === 'object' && !Array.isArray(pago);
 
   return (
-    <div className="rounded-2xl border border-success/35 bg-surface p-6 shadow-card">
+    <div className="glass-panel rounded-2xl border border-success/35 bg-surface p-6 shadow-card">
       <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-success">Pago exitoso</h3>
 
       {!esObjeto ? (

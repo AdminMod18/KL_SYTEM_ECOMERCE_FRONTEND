@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { obtenerKpis } from '../services/analyticsService.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
+import { motion } from 'framer-motion';
 
 export function PanelBam() {
   const [kpi, setKpi] = useState(null);
@@ -33,7 +34,7 @@ export function PanelBam() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Director · BAM</p>
           <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
-            Tablero de control (KPIs)
+            Tablero de control <span className="gradient-text">(KPIs)</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-text-secondary">
             HU-23: KPIs demo desde analytics-service. El catálogo envía <code className="text-xs">CONSULTA_CATALOGO</code> vía{' '}
@@ -66,48 +67,48 @@ export function PanelBam() {
 
       {kpi && !loading ? (
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Eventos totales</p>
             <p className="mt-2 font-sans text-2xl font-bold tabular-nums text-text-primary">{kpi.totalEventos}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Compras registradas</p>
             <p className="mt-2 font-sans text-2xl font-bold tabular-nums text-text-primary">{kpi.comprasRegistradas}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Ingresos compras</p>
             <p className="mt-2 font-sans text-2xl font-bold tabular-nums text-text-primary">
               {kpi.ingresosComprasAcumulados != null ? String(kpi.ingresosComprasAcumulados) : '—'}
             </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Solicitudes aprobadas (eventos)</p>
             <p className="mt-2 font-sans text-2xl font-bold tabular-nums text-text-primary">
               {kpi.solicitudesAprobadasRegistradas}
             </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Consultas catálogo</p>
             <p className="mt-2 font-sans text-2xl font-bold tabular-nums text-text-primary">
               {kpi.consultasCatalogoRegistradas ?? 0}
             </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">SKU más frecuente (compras)</p>
             <p className="mt-2 break-all text-sm font-medium text-text-primary">{kpi.skuCompraMasFrecuente ?? '—'}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Consulta catálogo top</p>
             <p className="mt-2 break-all text-sm font-medium text-text-primary">{kpi.textoConsultaMasFrecuente ?? '—'}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:col-span-2 lg:col-span-3">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5 sm:col-span-2 lg:col-span-3">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Resumen marketing / tendencias</p>
             <p className="mt-2 text-sm leading-relaxed text-text-primary">{kpi.tendenciasMarketingResumen ?? '—'}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-card sm:col-span-2 lg:col-span-2">
+          </motion.div>
+          <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5 sm:col-span-2 lg:col-span-2">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Último evento</p>
             <p className="mt-2 text-sm text-text-primary">{kpi.ultimoEventoEn ?? '—'}</p>
-          </div>
+          </motion.div>
         </section>
       ) : null}
     </div>

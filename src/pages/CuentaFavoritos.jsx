@@ -14,12 +14,12 @@ export function CuentaFavoritos() {
       </p>
 
       {favorites.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-surface/80 px-6 py-16 text-center shadow-inner">
+        <div className="glass-panel rounded-2xl border border-dashed border-border px-6 py-16 text-center shadow-inner">
           <p className="text-sm font-medium text-text-primary">Aún no tienes favoritos guardados.</p>
           <p className="mt-2 text-sm text-text-muted">Explora el catálogo y pulsa el corazón en las tarjetas para guardarlos.</p>
           <Link
             to="/catalog"
-            className="mt-6 inline-flex rounded-xl bg-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-black/90"
+            className="premium-button mt-6 inline-flex rounded-xl px-5 py-2.5 text-sm font-semibold text-white"
           >
             Ir al catálogo
           </Link>

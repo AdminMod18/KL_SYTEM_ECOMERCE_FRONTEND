@@ -1,23 +1,25 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 import { ROLES, hasAnyRole, isAdmin, isVendedor } from '../auth/roles.js';
+import { motion } from 'framer-motion';
+import { ArrowUpRight } from 'lucide-react';
 
 function Card({ to, title, description, eyebrow }) {
+  const MotionLink = motion(Link);
   return (
-    <Link
+    <MotionLink
+      whileHover={{ y: -4 }}
       to={to}
-      className="group flex flex-col rounded-2xl border border-border bg-surface p-6 shadow-card transition hover:border-cart-badge/40 hover:shadow-md"
+      className="group premium-card-hover flex flex-col rounded-2xl border border-border bg-surface/85 p-6 shadow-card backdrop-blur"
     >
       {eyebrow ? <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">{eyebrow}</p> : null}
       <h2 className="mt-2 font-sans text-lg font-semibold text-text-primary group-hover:text-cart-badge">{title}</h2>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-text-secondary">{description}</p>
       <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-cart-badge">
         Abrir
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+        <ArrowUpRight className="h-4 w-4" />
       </span>
-    </Link>
+    </MotionLink>
   );
 }
 

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { OrdenDesglosePanel } from '../components/OrdenDesglosePanel.jsx';
 import { PagoExitoPanel } from '../components/PagoExitoPanel.jsx';
 import { clearCheckoutRecibo, readCheckoutRecibo, saveCheckoutRecibo } from '../services/checkoutReciboStorage.js';
+import { motion } from 'framer-motion';
 
 /**
  * Lee recibo en el primer frame: primero el state del router, luego sessionStorage
@@ -49,7 +50,7 @@ export function CheckoutRecibo() {
 
   if (!orden) {
     return (
-      <div className="mx-auto max-w-lg space-y-6 text-center">
+      <div className="glass-panel mx-auto max-w-lg space-y-6 rounded-2xl p-8 text-center">
         <h1 className="font-sans text-2xl font-bold text-text-primary">Sin recibo</h1>
         <p className="text-sm text-text-secondary">
           No hay datos de un pago reciente. Si acabas de pagar, vuelve al checkout o revisa tu historial en{' '}
@@ -66,7 +67,11 @@ export function CheckoutRecibo() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto max-w-lg space-y-6"
+    >
       <header>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Pago completado</p>
         <h1 className="mt-2 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Recibo</h1>
@@ -75,7 +80,7 @@ export function CheckoutRecibo() {
 
       <PagoExitoPanel pago={pago} referenciaCliente={referenciaCliente} />
 
-      <div className="rounded-2xl border border-border bg-success/5 px-5 py-4 text-sm text-text-primary">
+      <div className="glass-panel rounded-2xl border-emerald-500/25 bg-success/5 px-5 py-4 text-sm text-text-primary">
         <p className="font-semibold text-text-primary">Pedido confirmado</p>
         <p className="mt-1 text-text-secondary">Desglose de la orden (order-service):</p>
       </div>
@@ -97,6 +102,6 @@ export function CheckoutRecibo() {
           Ver mis pedidos
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }

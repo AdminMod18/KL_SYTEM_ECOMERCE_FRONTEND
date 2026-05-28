@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createUsuario } from '../services/userService.js';
 import { SITE_NAME } from '../data/marketplaceContent.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
+import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 
 const inputClass =
   'mt-2 w-full rounded-full border-0 bg-search-field px-5 py-3 text-sm text-text-primary placeholder:text-text-muted shadow-inner ring-1 ring-inset ring-black/[0.06] focus:outline-none focus:ring-2 focus:ring-cart-badge/35';
@@ -71,14 +73,20 @@ export function Registro() {
   }
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-2 lg:gap-14">
-      <div className="hidden flex-col justify-center rounded-2xl border border-border bg-surface p-10 shadow-card lg:flex">
+    <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-2 lg:gap-14">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="bg-mesh hidden flex-col justify-center rounded-3xl border border-white/40 bg-surface p-10 shadow-card lg:flex"
+      >
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-badge-text">Join {SITE_NAME}</p>
-        <h1 className="mt-4 font-sans text-4xl font-bold tracking-tight text-text-primary md:text-5xl">Create your account</h1>
+        <h1 className="mt-4 font-sans text-4xl font-bold tracking-tight text-text-primary md:text-5xl">
+          Create your <span className="gradient-text">premium account</span>
+        </h1>
         <p className="mt-4 text-lead text-text-secondary">One account for checkout, orders, and seller tools.</p>
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
         <div className="lg:hidden">
           <h1 className="font-sans text-3xl font-bold tracking-tight text-text-primary">Create account</h1>
           <p className="mt-2 text-sm text-text-secondary">Register with the user service API.</p>
@@ -88,7 +96,11 @@ export function Registro() {
           <p className="mt-2 text-sm text-text-secondary">Fill in your details to get started.</p>
         </div>
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-5 rounded-2xl border border-border bg-surface p-8 shadow-card">
+        <form onSubmit={onSubmit} className="glass-panel mt-8 space-y-5 rounded-3xl p-8">
+          <div className="inline-flex items-center gap-2 rounded-full bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
+            <Sparkles className="h-3.5 w-3.5" />
+            New profile
+          </div>
           {error && (
             <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
           )}
@@ -202,7 +214,7 @@ export function Registro() {
             </Link>
           </p>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

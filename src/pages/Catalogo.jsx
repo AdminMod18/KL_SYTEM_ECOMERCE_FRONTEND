@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext.jsx';
 import { extractCategories, filterProductos } from '../services/catalog.js';
 import { CATEGORIES } from '../data/marketplaceContent.js';
 import { registrarEventoMetrica } from '../services/analyticsService.js';
+import { motion } from 'framer-motion';
 
 const SLUG_TO_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.slug, c.title]));
 
@@ -68,7 +69,7 @@ export function Catalogo() {
     <div>
       <div className="mb-10 max-w-content">
         <h1 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Catalog</h1>
-        <p className="mt-3 text-lead text-text-secondary">Browse the full collection. Filter by category, price, or search.</p>
+        <p className="mt-3 text-lead text-text-secondary">Browse premium inventory with elegant filters and instant search.</p>
       </div>
 
       {error && (
@@ -107,7 +108,7 @@ export function Catalogo() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="overflow-hidden rounded-2xl border border-border bg-surface shadow-card"
+                  className="overflow-hidden rounded-2xl border border-border bg-surface/80 shadow-card backdrop-blur"
                 >
                   <div className="aspect-[4/3] animate-pulse bg-page" />
                   <div className="space-y-3 p-5">
@@ -120,11 +121,14 @@ export function Catalogo() {
               ))}
             </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <motion.div
+              layout
+              className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+            >
               {filtered.map((p) => (
                 <ProductCard key={p.id} product={p} onAddToCart={addItem} />
               ))}
-            </div>
+            </motion.div>
           )}
           {!loading && !error && !filtered.length && (
             <p className="rounded-2xl border border-dashed border-border bg-surface-muted py-14 text-center text-sm text-text-muted">

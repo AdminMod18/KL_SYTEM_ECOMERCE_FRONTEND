@@ -27,6 +27,7 @@ import {
   validarMontoActivacion,
   validarScoreCifin,
 } from '../utils/sellerFormValidators.js';
+import { motion } from 'framer-motion';
 
 /** Límite por archivo (PDF o imagen); el cuerpo JSON crece ~4/3 por Base64. */
 const MAX_BYTES_ADJUNTO = 3 * 1024 * 1024;
@@ -642,7 +643,7 @@ export function SellerOnboardingPanel() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-panel rounded-2xl p-6 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-sans text-lg font-semibold text-text-primary">Estado de tu solicitud</h2>
@@ -663,11 +664,11 @@ export function SellerOnboardingPanel() {
               </button>
             ) : null}
             {estado === 'ACTIVA' && solicitudId ? (
-              <button
+            <button
                 type="button"
                 disabled={loading || syncRolLoading}
                 onClick={() => handleSincronizarRolSesion()}
-                className="rounded-xl border border-green-600/40 bg-green-50 px-4 py-2 text-sm font-semibold text-green-900 transition hover:bg-green-100 disabled:opacity-50"
+              className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-300"
               >
                 {syncRolLoading ? 'Sincronizando rol…' : 'Actualizar rol VENDEDOR en sesión'}
               </button>
@@ -675,7 +676,7 @@ export function SellerOnboardingPanel() {
             <button
               type="button"
               onClick={handleNuevaSolicitud}
-              className="rounded-xl border border-border-strong px-4 py-2 text-sm font-semibold text-text-secondary transition hover:border-danger hover:text-danger"
+            className="rounded-xl border border-border-strong px-4 py-2 text-sm font-semibold text-text-secondary transition hover:border-red-400 hover:text-red-500"
             >
               Nueva solicitud
             </button>
@@ -746,17 +747,17 @@ export function SellerOnboardingPanel() {
             {error}
           </div>
         ) : null}
-      </div>
+      </motion.div>
 
       {!solicitudId || onboardingBloqueado ? (
-        <section className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+        <section className="glass-panel rounded-2xl p-6 shadow-card">
           <h3 className="font-sans text-base font-semibold text-text-primary">1. Crear solicitud</h3>
           <p className="mt-1 text-sm text-text-secondary">
             Solicitud de vendedor: datos del interesado (1–7) y documentos requeridos (8). Estado inicial PENDIENTE. Los
             archivos del punto 8 se envían en Base64 al servicio de solicitudes (máximo {Math.round(MAX_BYTES_ADJUNTO / (1024 * 1024))}{' '}
             MB por archivo, PDF o imagen).
           </p>
-          <div className="mt-5 rounded-xl border border-brand/25 bg-brand-soft/40 px-4 py-4">
+            <div className="mt-5 rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-4">
             <p className="text-xs font-bold uppercase tracking-wider text-text-muted">Plantillas de los puntos 4 y 5 del anexo</p>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               Descargue o abra cada formato desde esta misma página; imprima o guarde como PDF (Ctrl+P), fírmelo y súbalo
@@ -967,7 +968,7 @@ export function SellerOnboardingPanel() {
       ) : null}
 
       {solicitudId && puedeRevalidar ? (
-        <section className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+        <section className="glass-panel rounded-2xl p-6 shadow-card">
           <h3 className="font-sans text-base font-semibold text-text-primary">
             {esDevuelta ? '2. Reintentar validación' : '2. Validacion automatica'}
           </h3>
@@ -1021,7 +1022,7 @@ export function SellerOnboardingPanel() {
       ) : null}
 
       {solicitudId && puedeActivar ? (
-        <section className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+        <section className="glass-panel rounded-2xl p-6 shadow-card">
           <h3 className="font-sans text-base font-semibold text-text-primary">3. Activar vendedor (pago)</h3>
           <p className="mt-1 text-sm text-text-secondary">Solo en estado APROBADA. Integra con payment-service.</p>
           <form onSubmit={handleActivar} className="mt-4 space-y-4">
@@ -1118,7 +1119,7 @@ export function SellerOnboardingPanel() {
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+      <section className="glass-panel rounded-2xl p-6 shadow-card">
         <h3 className="font-sans text-base font-semibold text-text-primary">4. Publicar producto</h3>
         {!puedePublicar ? (
           <p

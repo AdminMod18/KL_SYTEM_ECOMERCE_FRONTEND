@@ -16,6 +16,7 @@ import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
 import { formatMoney } from '../utils/formatMoney.js';
+import { motion } from 'framer-motion';
 
 /** Fases del checkout (orden y pago desacoplados). */
 const CHECKOUT_PHASE = {
@@ -157,7 +158,7 @@ export function Checkout() {
     return (
       <div className="mx-auto max-w-md space-y-6 text-center">
         <StepIndicator phase={phase} />
-        <div className="rounded-2xl border border-border bg-surface p-10 shadow-card">
+        <div className="glass-panel rounded-2xl p-10 shadow-card">
           <div
             className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-brand border-t-transparent"
             aria-hidden
@@ -232,7 +233,7 @@ export function Checkout() {
           </p>
         </div>
         <div className="grid gap-8 lg:grid-cols-5">
-          <aside className="rounded-2xl border border-border bg-surface p-6 shadow-card lg:col-span-2">
+          <aside className="glass-panel rounded-2xl p-6 shadow-card lg:col-span-2">
             <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Resumen del carrito</h2>
             <ul className="mt-4 space-y-3">
               {items.map((p) => (
@@ -255,7 +256,7 @@ export function Checkout() {
           </aside>
           <div className="space-y-6 lg:col-span-3">
             <OrdenDesglosePanel orden={orden} />
-            <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+            <motion.div whileHover={{ y: -3 }} className="glass-panel rounded-2xl p-5 shadow-card">
               <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Método de pago (demo)</h3>
               <fieldset className="mt-4 space-y-3">
                 <legend className="sr-only">Tipo de pago</legend>
@@ -328,7 +329,7 @@ export function Checkout() {
                   {pagoPrepError}
                 </p>
               ) : null}
-            </div>
+            </motion.div>
             <div
               id="orden-creada-cart-warning"
               className="rounded-xl border border-cart-badge/40 bg-cart-badge/10 px-4 py-3 text-sm text-text-primary"

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getSolicitud, getSolicitudes, renovarSuscripcion, validarSolicitud } from '../services/sellerService.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
+import { motion } from 'framer-motion';
 
 const ESTADOS = [
   '',
@@ -212,7 +213,7 @@ export function PanelDirector() {
         </p>
       </header>
 
-      <section className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+      <section className="glass-panel rounded-2xl p-6 shadow-card">
         <h2 className="font-sans text-base font-semibold text-text-primary">Filtros</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <div>
@@ -292,7 +293,7 @@ export function PanelDirector() {
         </div>
       ) : null}
 
-      <section className="mt-8 overflow-x-auto rounded-2xl border border-border bg-surface shadow-card">
+      <section className="glass-panel mt-8 overflow-x-auto rounded-2xl shadow-card">
         <table className="min-w-[1040px] w-full border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-page">
@@ -315,8 +316,14 @@ export function PanelDirector() {
                 </td>
               </tr>
             ) : (
-              filas.map((row) => (
-                <tr key={row.id} className="border-b border-border hover:bg-page/80">
+              filas.map((row, index) => (
+                <motion.tr
+                  key={row.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, delay: Math.min(index * 0.02, 0.2) }}
+                  className="border-b border-border hover:bg-page/80"
+                >
                   <td className="px-4 py-3 font-mono text-xs text-text-secondary">{row.documentoIdentidad}</td>
                   <td className="max-w-[140px] truncate px-4 py-3 text-text-primary">{row.apellidos ?? '—'}</td>
                   <td className="max-w-[140px] truncate px-4 py-3 text-text-primary">{row.nombres ?? '—'}</td>
@@ -342,7 +349,7 @@ export function PanelDirector() {
                       Detalle
                     </button>
                   </td>
-                </tr>
+                </motion.tr>
               ))
             )}
           </tbody>
@@ -356,7 +363,7 @@ export function PanelDirector() {
           aria-modal="true"
           aria-labelledby="detalle-titulo"
         >
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-6 shadow-xl">
+          <div className="glass-panel max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6 shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <h2 id="detalle-titulo" className="font-sans text-lg font-semibold text-text-primary">
                 Detalle solicitud

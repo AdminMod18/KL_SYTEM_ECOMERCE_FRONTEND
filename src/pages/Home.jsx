@@ -6,6 +6,7 @@ import { TrustFeatureIcon } from '../components/TrustFeatureIcon.jsx';
 import { CATEGORY_SECTION, CATEGORIES, FEATURED_SECTION, TRUST_SECTION } from '../data/marketplaceContent.js';
 import { useProductos } from '../hooks/useProductos.js';
 import { useCart } from '../context/CartContext.jsx';
+import { motion } from 'framer-motion';
 
 export function Home() {
   const { productos, loading, error, reload } = useProductos();
@@ -29,7 +30,7 @@ export function Home() {
         </div>
       ) : null}
 
-      <section>
+      <motion.section initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
         <div className="mx-auto max-w-content text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">{CATEGORY_SECTION.eyebrow}</p>
           <h2 className="mt-4 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">{CATEGORY_SECTION.title}</h2>
@@ -40,9 +41,9 @@ export function Home() {
             <CategoryCard key={c.slug} title={c.title} description={c.description} to={`/catalog?cat=${c.slug}`} />
           ))}
         </div>
-      </section>
+      </motion.section>
 
-      <section>
+      <motion.section initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
         <div className="mx-auto flex max-w-wide flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="text-center sm:text-left">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-badge-text">{FEATURED_SECTION.eyebrow}</p>
@@ -59,7 +60,11 @@ export function Home() {
           </Link>
         </div>
         {loading ? (
-          <p className="mt-12 text-center text-sm text-text-muted">Cargando productos…</p>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="glass-panel h-72 animate-pulse" />
+            ))}
+          </div>
         ) : featured.length ? (
           <div className="mx-auto mt-12 grid max-w-wide gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((p) => (
@@ -74,9 +79,14 @@ export function Home() {
             </Link>
           </p>
         )}
-      </section>
+      </motion.section>
 
-      <section className="rounded-2xl bg-surface px-6 py-14 shadow-card sm:px-10 lg:px-14">
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="glass-panel rounded-2xl px-6 py-14 sm:px-10 lg:px-14"
+      >
         <div className="mx-auto max-w-content text-center">
           <h2 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
             {TRUST_SECTION.title}{' '}
@@ -86,14 +96,14 @@ export function Home() {
         </div>
         <div className="mx-auto mt-12 grid max-w-wide gap-10 md:grid-cols-3 md:gap-8">
           {TRUST_SECTION.pillars.map((pillar) => (
-            <div key={pillar.title} className="flex flex-col items-center text-center">
+            <div key={pillar.title} className="premium-card-hover flex flex-col items-center rounded-2xl p-5 text-center">
               <TrustFeatureIcon type={pillar.icon} />
               <h3 className="mt-5 font-sans text-lg font-semibold text-text-primary">{pillar.title}</h3>
               <p className="mt-3 text-sm leading-relaxed text-text-secondary">{pillar.body}</p>
             </div>
           ))}
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }

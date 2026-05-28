@@ -9,6 +9,7 @@ import { favoriteSnapshotFromProduct } from '../utils/favoriteSnapshot.js';
 import { useProductos } from '../hooks/useProductos.js';
 import { formatMoney } from '../utils/formatMoney.js';
 import { parseImagenesUrlsCadena } from '../utils/imagenesUrls.js';
+import { motion } from 'framer-motion';
 
 function imagenesProductoLista(p) {
   return parseImagenesUrlsCadena(p?.imagenesUrls);
@@ -36,7 +37,7 @@ export function ProductoDetalle() {
 
   if (!loading && !p) {
     return (
-      <div className="rounded-2xl border border-border bg-surface p-10 text-center shadow-card">
+      <div className="glass-panel rounded-2xl p-10 text-center shadow-card">
         <h1 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Producto no encontrado</h1>
         <p className="mt-2 text-text-secondary">Este artículo no está en el catálogo actual.</p>
         <Link to="/catalog" className="mt-6 inline-block rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground">
@@ -69,7 +70,7 @@ export function ProductoDetalle() {
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
+        <motion.div whileHover={{ y: -3 }} className="glass-panel overflow-hidden rounded-2xl shadow-card">
           <div className="aspect-square bg-gradient-to-br from-white/[0.07] to-transparent p-4 sm:p-6">
             {imagenPrincipal ? (
               <img
@@ -100,7 +101,7 @@ export function ProductoDetalle() {
               ))}
             </div>
           ) : null}
-        </div>
+        </motion.div>
         <div>
           <span className="inline-block rounded-full border border-border bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand">
             {topCat}
@@ -174,7 +175,7 @@ export function ProductoDetalle() {
                 addItem({ id: p.id, sku: `SKU-${p.id}`, nombre: p.nombre, precio: p.precio });
                 navigate('/cart');
               }}
-              className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition hover:bg-brand-hover"
+              className="premium-button rounded-xl px-6 py-3 text-sm font-semibold text-brand-foreground"
             >
               Añadir y ver carrito
             </button>

@@ -22,7 +22,7 @@ export function CheckoutForm({
 }) {
   if (!items.length) {
     return (
-      <div className="rounded-2xl border border-border bg-surface p-10 text-center shadow-card">
+      <div className="glass-panel rounded-2xl p-10 text-center shadow-card">
         <h2 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Your cart is empty</h2>
         <p className="mt-2 text-text-secondary">Add items before checkout.</p>
         <Link to="/cart" className="mt-6 inline-flex rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-brand-foreground">
@@ -34,7 +34,7 @@ export function CheckoutForm({
 
   return (
     <div className="grid gap-8 lg:grid-cols-5">
-      <div className="rounded-2xl border border-border bg-surface p-6 shadow-card lg:col-span-2">
+      <div className="glass-panel rounded-2xl p-6 shadow-card lg:col-span-2">
         <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">
           Carrito (impuestos, comisión y envío los calcula el servidor según destino)
         </h2>
@@ -62,7 +62,7 @@ export function CheckoutForm({
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="rounded-2xl border border-border bg-surface p-6 shadow-card lg:col-span-3">
+      <form onSubmit={onSubmit} className="glass-panel rounded-2xl p-6 shadow-card lg:col-span-3">
         <h2 className="font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Order details</h2>
         <p className="mt-1 text-sm text-text-secondary">
           En este paso solo se envía <code className="rounded bg-page px-1.5 py-0.5 text-xs">POST /orden</code>. El pago se confirma en el

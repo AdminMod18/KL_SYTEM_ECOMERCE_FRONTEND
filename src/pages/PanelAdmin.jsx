@@ -7,6 +7,7 @@ import {
   listarParametros,
 } from '../services/adminService.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
+import { motion } from 'framer-motion';
 
 const SECCIONES = [
   { id: 'parametros', label: 'Parámetros' },
@@ -87,7 +88,7 @@ export function PanelAdmin() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Director · Administración</p>
           <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
-            Parámetros del sistema
+            Parámetros del <span className="gradient-text">sistema</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-text-secondary">
             Caso estudio: parametrización central (admin-service), auditoría y logs en modo demo. En desarrollo use el
@@ -126,7 +127,7 @@ export function PanelAdmin() {
             onClick={() => setSeccion(s.id)}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
               seccion === s.id
-                ? 'bg-black text-white'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
                 : 'bg-page text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -151,7 +152,7 @@ export function PanelAdmin() {
       ) : null}
 
       {seccion === 'parametros' && !cargando ? (
-        <section className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-card">
+        <section className="glass-panel overflow-x-auto rounded-2xl shadow-card">
           <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-page">
               <tr>
@@ -169,8 +170,14 @@ export function PanelAdmin() {
                   </td>
                 </tr>
               ) : (
-                parametros.map((row) => (
-                  <tr key={row.clave} className="hover:bg-page/80">
+                parametros.map((row, index) => (
+                  <motion.tr
+                    key={row.clave}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, delay: Math.min(index * 0.02, 0.2) }}
+                    className="hover:bg-page/80"
+                  >
                     <td className="max-w-[220px] whitespace-normal break-all px-4 py-3 font-mono text-xs text-text-primary">
                       {row.clave}
                     </td>
@@ -199,7 +206,7 @@ export function PanelAdmin() {
                         {guardandoClave === row.clave ? 'Guardando…' : 'Guardar'}
                       </button>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))
               )}
             </tbody>
@@ -208,7 +215,7 @@ export function PanelAdmin() {
       ) : null}
 
       {seccion === 'auditoria' && !cargando ? (
-        <section className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-card">
+        <section className="glass-panel overflow-x-auto rounded-2xl shadow-card">
           <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-page">
               <tr>
@@ -220,12 +227,18 @@ export function PanelAdmin() {
             </thead>
             <tbody className="divide-y divide-border">
               {auditoria.map((row, i) => (
-                <tr key={`${row.ocurridoEn}-${i}`} className="hover:bg-page/80">
+                <motion.tr
+                  key={`${row.ocurridoEn}-${i}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, delay: Math.min(i * 0.015, 0.18) }}
+                  className="hover:bg-page/80"
+                >
                   <td className="whitespace-nowrap px-4 py-3 text-text-muted">{fmtInstant(row.ocurridoEn)}</td>
                   <td className="px-4 py-3 text-text-primary">{row.actor}</td>
                   <td className="px-4 py-3 font-medium text-text-primary">{row.accion}</td>
                   <td className="max-w-md px-4 py-3 text-text-secondary">{row.detalle}</td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
@@ -233,7 +246,7 @@ export function PanelAdmin() {
       ) : null}
 
       {seccion === 'logs' && !cargando ? (
-        <section className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-card">
+        <section className="glass-panel overflow-x-auto rounded-2xl shadow-card">
           <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-page">
               <tr>
@@ -245,12 +258,18 @@ export function PanelAdmin() {
             </thead>
             <tbody className="divide-y divide-border">
               {logs.map((row, i) => (
-                <tr key={`${row.ocurridoEn}-${i}`} className="hover:bg-page/80">
+                <motion.tr
+                  key={`${row.ocurridoEn}-${i}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, delay: Math.min(i * 0.015, 0.18) }}
+                  className="hover:bg-page/80"
+                >
                   <td className="whitespace-nowrap px-4 py-3 text-text-muted">{fmtInstant(row.ocurridoEn)}</td>
                   <td className="px-4 py-3 font-semibold text-text-primary">{row.nivel}</td>
                   <td className="px-4 py-3 text-text-secondary">{row.origen}</td>
                   <td className="max-w-lg px-4 py-3 text-text-secondary">{row.mensaje}</td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { FOOTER_NAV, SITE_NAME } from '../data/marketplaceContent.js';
+import { ArrowUpRight } from 'lucide-react';
 
 function SocialIcon({ href, label, children }) {
   return (
@@ -53,11 +54,13 @@ export function Footer({ variant = 'storefront' }) {
   }
 
   return (
-    <footer className="mt-auto border-t border-border bg-surface-muted">
+    <footer className="mt-auto border-t border-border/70 bg-surface/70 backdrop-blur-xl">
       <div className="mx-auto max-w-wide px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           <div>
-            <p className="text-lg font-bold tracking-tight text-text-primary">{SITE_NAME}</p>
+            <p className="text-lg font-bold tracking-tight text-text-primary">
+              {SITE_NAME} <span className="gradient-text">Premium</span>
+            </p>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-text-secondary">{FOOTER_NAV.tagline}</p>
             <div className="mt-6 flex gap-3">
               <SocialIcon href="#" label="Facebook">
@@ -84,8 +87,9 @@ export function Footer({ variant = 'storefront' }) {
               <ul className="mt-4 space-y-3">
                 {col.links.map((link) => (
                   <li key={link.to + link.label}>
-                    <Link to={link.to} className="text-sm text-text-secondary transition hover:text-text-primary">
+                    <Link to={link.to} className="inline-flex items-center gap-1 text-sm text-text-secondary transition hover:text-text-primary">
                       {link.label}
+                      <ArrowUpRight className="h-3.5 w-3.5 opacity-60" />
                     </Link>
                   </li>
                 ))}

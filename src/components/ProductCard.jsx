@@ -6,6 +6,7 @@ import { formatMoney } from '../utils/formatMoney.js';
 import { categoryLabelFromPath } from '../utils/categoryLabel.js';
 import { favoriteSnapshotFromProduct } from '../utils/favoriteSnapshot.js';
 import { parseImagenesUrlsCadena } from '../utils/imagenesUrls.js';
+import { motion } from 'framer-motion';
 
 function primeraImagenProducto(product) {
   const urls = parseImagenesUrlsCadena(product?.imagenesUrls);
@@ -33,18 +34,22 @@ export function ProductCard({ product, onAddToCart }) {
   }
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card transition duration-200 hover:border-border-strong hover:shadow-card-hover">
+    <motion.article
+      whileHover={{ y: -5 }}
+      transition={{ duration: 0.2 }}
+      className="group premium-card-hover flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-surface/85 shadow-card backdrop-blur-xl"
+    >
       <div className="relative shrink-0">
         <Link to={`/product/${product.id}`} state={{ product }} className="block">
-          <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-white/[0.06] to-transparent">
+          <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-blue-500/10 via-transparent to-violet-500/10">
             {img ? (
-              <img src={img} alt="" className="h-full w-full object-cover transition duration-200 group-hover:scale-105" loading="lazy" />
+              <img src={img} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-110" loading="lazy" />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center font-display text-5xl font-normal text-white/[0.12] transition group-hover:scale-105">
                 {initial}
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-page via-transparent to-transparent opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-900/10 to-transparent opacity-80" />
           </div>
         </Link>
         <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-end p-3">
@@ -56,7 +61,9 @@ export function ProductCard({ product, onAddToCart }) {
 
       <Link to={`/product/${product.id}`} state={{ product }} className="flex flex-1 flex-col p-5">
         {category ? (
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-cart-badge">{category}</p>
+          <p className="inline-flex w-fit rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+            {category}
+          </p>
         ) : (
           <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">Sin categoría</p>
         )}
@@ -78,11 +85,11 @@ export function ProductCard({ product, onAddToCart }) {
               rutaCategoria: product.rutaCategoria,
             })
           }
-          className="mt-2 w-full rounded-xl border border-border-strong py-2.5 text-sm font-semibold text-text-primary transition hover:border-brand hover:bg-brand-soft"
+          className="mt-2 w-full rounded-xl border border-border-strong py-2.5 text-sm font-semibold text-text-primary transition hover:border-blue-500/40 hover:bg-blue-500/10"
         >
           Add to cart
         </button>
       </div>
-    </article>
+    </motion.article>
   );
 }

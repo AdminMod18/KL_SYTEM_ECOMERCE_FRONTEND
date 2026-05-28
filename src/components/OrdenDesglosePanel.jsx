@@ -14,7 +14,7 @@ export function OrdenDesglosePanel({ orden }) {
   ];
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+    <div className="glass-panel rounded-2xl p-6 shadow-card">
       <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Desglose (servidor)</h3>
       <dl className="mt-4 space-y-3">
         {rows.map(({ label, value }) => (

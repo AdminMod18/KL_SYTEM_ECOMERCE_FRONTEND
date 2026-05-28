@@ -132,7 +132,7 @@ export function MisPedidos() {
       ) : null}
 
       {(mostrarClienteId || !username) && (
-        <section className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+        <section className="glass-panel rounded-2xl p-6 shadow-card">
           <label className="text-sm font-medium text-text-primary">Cliente ID</label>
           <div className="mt-2 flex flex-wrap gap-3">
             <input
@@ -161,11 +161,11 @@ export function MisPedidos() {
 
       <ul className="space-y-5">
         {loading && ordenadas.length === 0 ? (
-          <li className="rounded-2xl border border-border bg-surface px-6 py-12 text-center text-sm text-text-muted shadow-card">
+          <li className="glass-panel rounded-2xl px-6 py-12 text-center text-sm text-text-muted shadow-card">
             Cargando pedidos…
           </li>
         ) : ordenadas.length === 0 ? (
-          <li className="rounded-2xl border border-border bg-surface px-6 py-12 text-center text-sm text-text-muted shadow-card">
+          <li className="glass-panel rounded-2xl px-6 py-12 text-center text-sm text-text-muted shadow-card">
             No hay pedidos para este cliente.
           </li>
         ) : (
@@ -175,7 +175,7 @@ export function MisPedidos() {
             return (
               <li
                 key={row.ordenId}
-                className="overflow-hidden rounded-2xl border border-border bg-surface shadow-card"
+                className="glass-panel overflow-hidden rounded-2xl shadow-card"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
                   <div>

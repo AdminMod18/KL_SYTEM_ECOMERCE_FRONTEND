@@ -1,4 +1,6 @@
 import { SellerOnboardingPanel } from '../components/SellerOnboardingPanel.jsx';
+import { motion } from 'framer-motion';
+import { TrendingUp } from 'lucide-react';
 
 export function DashboardVendedor() {
   const stats = [
@@ -13,7 +15,7 @@ export function DashboardVendedor() {
       <header className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Seller</p>
         <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
-          Panel de vendedor
+          Panel de vendedor <span className="gradient-text">premium</span>
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-text-secondary">
           Activa tu cuenta (solicitud + validacion + pago) y publica productos sin herramientas externas.
@@ -26,11 +28,18 @@ export function DashboardVendedor() {
         <h2 className="mb-4 font-sans text-lg font-semibold text-text-primary">Resumen demo</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+            <motion.div
+              key={s.label}
+              whileHover={{ y: -4 }}
+              className="glass-panel premium-card-hover rounded-2xl p-5"
+            >
               <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">{s.label}</p>
-              <p className="mt-3 font-sans text-2xl font-semibold tabular-nums text-text-primary">{s.value}</p>
+              <p className="mt-3 inline-flex items-center gap-2 font-sans text-2xl font-semibold tabular-nums text-text-primary">
+                {s.value}
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+              </p>
               <p className={`mt-1 text-sm font-semibold ${s.tone}`}>{s.delta}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>

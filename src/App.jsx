@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { MainLayout } from './layouts/MainLayout.jsx';
@@ -9,10 +10,6 @@ import { ProductoDetalle } from './pages/ProductoDetalle.jsx';
 import { Carrito } from './pages/Carrito.jsx';
 import { Checkout } from './pages/Checkout.jsx';
 import { CheckoutRecibo } from './pages/CheckoutRecibo.jsx';
-import { DashboardVendedor } from './pages/DashboardVendedor.jsx';
-import { PanelDirector } from './pages/PanelDirector.jsx';
-import { PanelBam } from './pages/PanelBam.jsx';
-import { PanelAdmin } from './pages/PanelAdmin.jsx';
 import { CuentaLayout } from './layouts/CuentaLayout.jsx';
 import { CuentaPerfil } from './pages/CuentaPerfil.jsx';
 import { CuentaFavoritos } from './pages/CuentaFavoritos.jsx';
@@ -20,103 +17,119 @@ import { CuentaConfiguracion } from './pages/CuentaConfiguracion.jsx';
 import { MisPedidos } from './pages/MisPedidos.jsx';
 import { ROLES } from './auth/roles.js';
 
+const DashboardVendedor = lazy(() => import('./pages/DashboardVendedor.jsx').then((m) => ({ default: m.DashboardVendedor })));
+const PanelDirector = lazy(() => import('./pages/PanelDirector.jsx').then((m) => ({ default: m.PanelDirector })));
+const PanelBam = lazy(() => import('./pages/PanelBam.jsx').then((m) => ({ default: m.PanelBam })));
+const PanelAdmin = lazy(() => import('./pages/PanelAdmin.jsx').then((m) => ({ default: m.PanelAdmin })));
+
+function RouteFallback() {
+  return (
+    <div className="glass-panel mx-auto max-w-3xl rounded-2xl px-6 py-10 text-center">
+      <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+      <p className="mt-4 text-sm font-medium text-text-secondary">Cargando módulo…</p>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <MainLayout>
-      <Routes>
-        <Route path="/" element={<Home />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
 
-        <Route path="/catalog" element={<Catalogo />} />
-        <Route path="/catalogo" element={<Navigate to="/catalog" replace />} />
+          <Route path="/catalog" element={<Catalogo />} />
+          <Route path="/catalogo" element={<Navigate to="/catalog" replace />} />
 
-        <Route path="/product/:id" element={<ProductoDetalle />} />
-        <Route path="/producto/:id" element={<ProductoDetalle />} />
+          <Route path="/product/:id" element={<ProductoDetalle />} />
+          <Route path="/producto/:id" element={<ProductoDetalle />} />
 
-        <Route
-          path="/cart"
-          element={
-            <ProtectedRoute>
-              <Carrito />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/carrito" element={<Navigate to="/cart" replace />} />
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute>
+                <Carrito />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/carrito" element={<Navigate to="/cart" replace />} />
 
-        <Route
-          path="/checkout"
-          element={
-            <ProtectedRoute>
-              <Checkout />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/checkout/recibo"
-          element={
-            <ProtectedRoute>
-              <CheckoutRecibo />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout/recibo"
+            element={
+              <ProtectedRoute>
+                <CheckoutRecibo />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login />} />
 
-        <Route path="/register" element={<Registro />} />
-        <Route path="/registro" element={<Navigate to="/register" replace />} />
+          <Route path="/register" element={<Registro />} />
+          <Route path="/registro" element={<Navigate to="/register" replace />} />
 
-        <Route
-          path="/cuenta"
-          element={
-            <ProtectedRoute>
-              <CuentaLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="perfil" replace />} />
-          <Route path="perfil" element={<CuentaPerfil />} />
-          <Route path="pedidos" element={<MisPedidos />} />
-          <Route path="favoritos" element={<CuentaFavoritos />} />
-          <Route path="configuracion" element={<CuentaConfiguracion />} />
-        </Route>
+          <Route
+            path="/cuenta"
+            element={
+              <ProtectedRoute>
+                <CuentaLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="perfil" replace />} />
+            <Route path="perfil" element={<CuentaPerfil />} />
+            <Route path="pedidos" element={<MisPedidos />} />
+            <Route path="favoritos" element={<CuentaFavoritos />} />
+            <Route path="configuracion" element={<CuentaConfiguracion />} />
+          </Route>
 
-        <Route
-          path="/seller"
-          element={
-            <ProtectedRoute>
-              <DashboardVendedor />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/director"
-          element={
-            <ProtectedRoute roles={[ROLES.ADMIN]}>
-              <PanelDirector />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/director/bam"
-          element={
-            <ProtectedRoute roles={[ROLES.ADMIN]}>
-              <PanelBam />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/director/admin"
-          element={
-            <ProtectedRoute roles={[ROLES.ADMIN]}>
-              <PanelAdmin />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/vendedor" element={<Navigate to="/seller" replace />} />
+          <Route
+            path="/seller"
+            element={
+              <ProtectedRoute>
+                <DashboardVendedor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/director"
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN]}>
+                <PanelDirector />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/director/bam"
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN]}>
+                <PanelBam />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/director/admin"
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN]}>
+                <PanelAdmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/vendedor" element={<Navigate to="/seller" replace />} />
 
-        <Route path="/become-seller" element={<Navigate to="/seller" replace />} />
+          <Route path="/become-seller" element={<Navigate to="/seller" replace />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </MainLayout>
   );
 }

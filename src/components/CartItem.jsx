@@ -1,11 +1,16 @@
 import { formatMoney } from '../utils/formatMoney.js';
 import { categoryLabelFromPath } from '../utils/categoryLabel.js';
+import { motion } from 'framer-motion';
 
 export function CartItem({ item, onQtyChange, onRemove }) {
   const subtotal = Number(item.precio) * item.cantidad;
   const category = categoryLabelFromPath(item.rutaCategoria);
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-panel flex flex-col gap-4 rounded-2xl p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="min-w-0 flex-1">
         {category ? (
           <p className="text-[11px] font-semibold uppercase tracking-wider text-cart-badge">{category}</p>
@@ -37,6 +42,6 @@ export function CartItem({ item, onQtyChange, onRemove }) {
           Remove
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
