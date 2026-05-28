@@ -5,6 +5,7 @@
 export const SITE_NAME = 'KL-ECOMMERCE';
 export const LOGO_SRC = '/branding/kl-ecommerce-logo.png';
 export const LOGO_ALT = 'KL-ECOMMERCE — logo';
+export const FAVICON_SRC = '/favicon-32x32.png';
 
 export const HERO = {
   eyebrow: 'Introducing our Premium Collection',
