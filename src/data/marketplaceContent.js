@@ -3,6 +3,8 @@
  * https://foil-peanut-77989849.figma.site/
  */
 export const SITE_NAME = 'KL-ECOMMERCE';
+export const LOGO_SRC = '/branding/kl-ecommerce-logo.png';
+export const LOGO_ALT = 'KL-ECOMMERCE — logo';
 
 export const HERO = {
   eyebrow: 'Introducing our Premium Collection',

@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
-import { SITE_NAME } from '../data/marketplaceContent.js';
+import { BrandLogo } from './BrandLogo.jsx';
 import { isAdmin } from '../auth/roles.js';
 import { ProfileAvatar } from './ProfileAvatar.jsx';
-import { Moon, Search, ShoppingBag, Sun, UserRound, X, Menu, Sparkles } from 'lucide-react';
+import { Moon, Search, ShoppingBag, Sun, UserRound, X, Menu } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { initialsFromProfile } from '../utils/jwtPayload.js';
@@ -84,15 +84,7 @@ export function Navbar({ variant = 'storefront' }) {
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link
-            to="/"
-            className="inline-flex shrink-0 items-center gap-2 text-lg font-bold tracking-tight text-text-primary"
-          >
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-500/25">
-              <Sparkles className="h-4 w-4" />
-            </span>
-            {SITE_NAME}
-          </Link>
+          <BrandLogo to="/" size="md" className="min-w-0" />
         </div>
 
         <nav className={`hidden items-center gap-0.5 lg:flex ${isAuth ? '' : ''}`}>
