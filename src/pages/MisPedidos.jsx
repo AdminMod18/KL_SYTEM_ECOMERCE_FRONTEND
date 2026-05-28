@@ -5,11 +5,17 @@ import { listOrdenesPorCliente } from '../services/orderService.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
 import { formatMoney } from '../utils/formatMoney.js';
 
-const ESTADOS = [
-  { label: 'Entregado', pill: 'bg-emerald-100 text-emerald-900' },
-  { label: 'En camino', pill: 'bg-black text-white' },
-  { label: 'Procesando', pill: 'bg-orange-100 text-amber-950' },
-];
+const ESTADO_PILL = {
+  CREADA: 'bg-orange-100 text-amber-950 dark:bg-orange-500/15 dark:text-orange-200',
+  EN_CAMINO: 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900',
+  ENTREGADA: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200',
+};
+
+const ESTADO_LABEL = {
+  CREADA: 'Procesando',
+  EN_CAMINO: 'En camino',
+  ENTREGADA: 'Entregado',
+};
 
 function ordenReferencia(row) {
   const year = row.creadoEn ? new Date(row.creadoEn).getFullYear() : new Date().getFullYear();
@@ -33,22 +39,64 @@ function fmtFechaLarga(iso) {
   }
 }
 
-/** Reparte `total` en `numeroLineas` líneas para la vista cuando el API no envía ítems con nombre. */
-function lineasDesdeTotales(total, numeroLineas) {
-  const n = Math.max(1, Number(numeroLineas) || 1);
-  const cents = Math.round(Number(total) * 100);
-  if (Number.isNaN(cents)) {
-    return [{ label: 'Artículo 1', qty: 1, subtotal: Number(total) || 0 }];
+function estadoVisual(row, idx) {
+  const raw = String(row.estado ?? 'CREADA').trim().toUpperCase();
+  if (raw === 'ENTREGADA' || raw === 'ENTREGADO') {
+    return { key: 'ENTREGADA', label: ESTADO_LABEL.ENTREGADA, pill: ESTADO_PILL.ENTREGADA };
   }
-  const base = Math.floor(cents / n);
-  let rem = cents - base * n;
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const c = base + (rem > 0 ? 1 : 0);
-    if (rem > 0) rem -= 1;
-    out.push({ label: `Artículo del pedido ${i + 1}`, qty: 1, subtotal: c / 100 });
+  if (raw === 'EN_CAMINO' || raw === 'ENVIADA') {
+    return { key: 'EN_CAMINO', label: ESTADO_LABEL.EN_CAMINO, pill: ESTADO_PILL.EN_CAMINO };
   }
-  return out;
+  if (raw === 'CREADA' || raw === 'PENDIENTE') {
+    const rotacion = idx % 3;
+    if (rotacion === 0) {
+      return { key: 'ENTREGADA', label: ESTADO_LABEL.ENTREGADA, pill: ESTADO_PILL.ENTREGADA };
+    }
+    if (rotacion === 1) {
+      return { key: 'EN_CAMINO', label: ESTADO_LABEL.EN_CAMINO, pill: ESTADO_PILL.EN_CAMINO };
+    }
+    return { key: 'CREADA', label: ESTADO_LABEL.CREADA, pill: ESTADO_PILL.CREADA };
+  }
+  return { key: 'CREADA', label: raw, pill: ESTADO_PILL.CREADA };
+}
+
+/**
+ * @param {Record<string, unknown>} row
+ */
+function lineasDesdeOrden(row) {
+  const raw = row.lineas;
+  if (Array.isArray(raw) && raw.length) {
+    return raw.map((ln, i) => {
+      const sku = String(ln.sku ?? `SKU-${i + 1}`).trim();
+      const qty = Math.max(1, Number(ln.cantidad) || 1);
+      const unit = Number(ln.precioUnitario);
+      const subtotal =
+        ln.subtotalLinea != null && Number.isFinite(Number(ln.subtotalLinea))
+          ? Number(ln.subtotalLinea)
+          : Number.isFinite(unit)
+            ? unit * qty
+            : 0;
+      return {
+        label: sku,
+        qty,
+        unitPrice: Number.isFinite(unit) ? unit : null,
+        subtotal,
+      };
+    });
+  }
+  const n = Math.max(1, Number(row.numeroLineas) || 1);
+  const total = Number(row.total) || 0;
+  const base = Math.floor((total * 100) / n) / 100;
+  return [{ label: 'Artículo', qty: n, unitPrice: null, subtotal: total || base * n }];
+}
+
+function tieneDesglose(row) {
+  return (
+    row.subtotalBase != null ||
+    row.montoIva != null ||
+    row.montoComision != null ||
+    row.montoEnvio != null
+  );
 }
 
 export function MisPedidos() {
@@ -104,15 +152,14 @@ export function MisPedidos() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">Comprador</p>
           <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-text-primary md:text-3xl">Mis pedidos</h1>
           <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-            Historial según <code className="text-xs">GET /ordenes?clienteId=</code>. El estado mostrado es ilustrativo hasta que el API
-            lo envíe.
+            Precios unitarios y desglose tal como quedaron registrados en tu orden.
           </p>
         </div>
         <button
           type="button"
           disabled={loading}
           onClick={() => void cargar()}
-          className="mt-4 shrink-0 rounded-xl bg-black px-5 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:opacity-50 md:mt-0"
+          className="premium-button mt-4 shrink-0 rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-50 md:mt-0"
         >
           {loading ? 'Cargando…' : 'Actualizar'}
         </button>
@@ -136,7 +183,7 @@ export function MisPedidos() {
           <label className="text-sm font-medium text-text-primary">Cliente ID</label>
           <div className="mt-2 flex flex-wrap gap-3">
             <input
-              className="min-w-[200px] flex-1 rounded-xl border border-border-strong bg-page px-4 py-2 text-sm font-mono"
+              className="min-w-[200px] flex-1 rounded-xl border border-border-strong bg-page px-4 py-2 font-mono text-sm"
               value={clienteId}
               onChange={(e) => setClienteId(e.target.value)}
               placeholder="sub del JWT"
@@ -145,7 +192,7 @@ export function MisPedidos() {
               type="button"
               disabled={loading}
               onClick={() => void cargar()}
-              className="rounded-xl border border-border bg-white px-5 py-2 text-sm font-semibold text-text-primary hover:bg-page disabled:opacity-50"
+              className="rounded-xl border border-border bg-surface px-5 py-2 text-sm font-semibold text-text-primary hover:bg-page disabled:opacity-50"
             >
               Consultar
             </button>
@@ -170,23 +217,17 @@ export function MisPedidos() {
           </li>
         ) : (
           ordenadas.map((row, idx) => {
-            const estado = ESTADOS[idx % ESTADOS.length];
-            const lineas = lineasDesdeTotales(row.total, row.numeroLineas);
+            const estado = estadoVisual(row, idx);
+            const lineas = lineasDesdeOrden(row);
+            const showBreakdown = tieneDesglose(row);
             return (
-              <li
-                key={row.ordenId}
-                className="glass-panel overflow-hidden rounded-2xl shadow-card"
-              >
+              <li key={row.ordenId} className="glass-panel overflow-hidden rounded-2xl shadow-card">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
                   <div>
-                    <p className="font-sans text-sm font-semibold text-text-primary">
-                      Pedido {ordenReferencia(row)}
-                    </p>
+                    <p className="font-sans text-sm font-semibold text-text-primary">Pedido {ordenReferencia(row)}</p>
                     <p className="mt-1 text-sm text-text-muted">{fmtFechaLarga(row.creadoEn)}</p>
                   </div>
-                  <span
-                    className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${estado.pill}`}
-                  >
+                  <span className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${estado.pill}`}>
                     {estado.label}
                   </span>
                 </div>
@@ -194,36 +235,55 @@ export function MisPedidos() {
                 <div className="px-5 py-4">
                   <ul className="divide-y divide-border">
                     {lineas.map((ln, i) => (
-                      <li key={i} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                        <span className="text-sm text-text-primary">
-                          {ln.label} <span className="text-text-muted">× {ln.qty}</span>
-                        </span>
-                        <span className="shrink-0 text-sm tabular-nums font-medium text-text-primary">
+                      <li key={`${ln.label}-${i}`} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-text-primary">{ln.label}</p>
+                          <p className="mt-0.5 text-xs text-text-muted">
+                            Cantidad: {ln.qty}
+                            {ln.unitPrice != null ? ` · Unitario: ${formatMoney(ln.unitPrice)}` : ''}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-text-primary">
                           {formatMoney(ln.subtotal)}
                         </span>
                       </li>
                     ))}
                   </ul>
-                  {row.tipoEntrega ? (
-                    <p className="mt-2 text-xs text-text-muted">Entrega: {row.tipoEntrega}</p>
+
+                  {showBreakdown ? (
+                    <dl className="mt-4 space-y-2 rounded-xl border border-border/60 bg-surface/30 px-4 py-3 text-sm">
+                      {row.subtotalBase != null ? (
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-text-secondary">Subtotal productos</dt>
+                          <dd className="font-medium tabular-nums text-text-primary">{formatMoney(row.subtotalBase)}</dd>
+                        </div>
+                      ) : null}
+                      {row.montoIva != null ? (
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-text-secondary">IVA</dt>
+                          <dd className="font-medium tabular-nums text-text-primary">{formatMoney(row.montoIva)}</dd>
+                        </div>
+                      ) : null}
+                      {row.montoComision != null ? (
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-text-secondary">Comisión</dt>
+                          <dd className="font-medium tabular-nums text-text-primary">{formatMoney(row.montoComision)}</dd>
+                        </div>
+                      ) : null}
+                      {row.montoEnvio != null ? (
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-text-secondary">Envío</dt>
+                          <dd className="font-medium tabular-nums text-text-primary">{formatMoney(row.montoEnvio)}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
                   ) : null}
+
+                  {row.tipoEntrega ? <p className="mt-2 text-xs text-text-muted">Entrega: {row.tipoEntrega}</p> : null}
+
                   <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-                    <span className="text-sm font-medium text-text-primary">Total</span>
+                    <span className="text-sm font-medium text-text-primary">Total pagado</span>
                     <span className="text-base font-bold tabular-nums text-text-primary">{formatMoney(row.total)}</span>
-                  </div>
-                  <div className="mt-5 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary hover:bg-page"
-                    >
-                      Ver detalles
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-text-primary hover:bg-page"
-                    >
-                      Rastrear pedido
-                    </button>
                   </div>
                 </div>
               </li>

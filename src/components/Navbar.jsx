@@ -4,9 +4,11 @@ import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 import { SITE_NAME } from '../data/marketplaceContent.js';
 import { isAdmin } from '../auth/roles.js';
+import { ProfileAvatar } from './ProfileAvatar.jsx';
 import { Moon, Search, ShoppingBag, Sun, UserRound, X, Menu, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { initialsFromProfile } from '../utils/jwtPayload.js';
 
 function storefrontNavLink({ isActive }) {
   return `rounded-full px-3 py-2 text-sm font-medium transition-colors tap-highlight-transparent ${
@@ -23,13 +25,18 @@ function authNavLink({ isActive }) {
 export function Navbar({ variant = 'storefront' }) {
   const navigate = useNavigate();
   const { items } = useCart();
-  const { isAuthenticated, logout, roles } = useAuth();
+  const { isAuthenticated, logout, roles, username, email, displayName } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const verAdmin = isAdmin(roles);
   const count = items.reduce((a, i) => a + i.cantidad, 0);
   const [open, setOpen] = useState(false);
   const isAuth = variant === 'auth';
   const navClass = isAuth ? authNavLink : storefrontNavLink;
+  const navInitials = initialsFromProfile({
+    sub: username,
+    email,
+    name: displayName !== username ? displayName : null,
+  });
 
   function handleLogout() {
     logout();
@@ -162,10 +169,10 @@ export function Navbar({ variant = 'storefront' }) {
               {!isAuth ? (
                 <Link
                   to="/cuenta/perfil"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-text-primary shadow-sm transition hover:border-border-strong"
+                  className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-surface shadow-sm transition hover:border-border-strong"
                   aria-label="Mi cuenta"
                 >
-                  <UserRound className="h-5 w-5 text-text-secondary" />
+                  <ProfileAvatar userKey={username} initials={navInitials} size="sm" className="h-10 w-10 shadow-none ring-0" />
                 </Link>
               ) : null}
               <button

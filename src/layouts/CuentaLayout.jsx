@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import { ProfileAvatarEditable } from '../components/ProfileAvatarPicker.jsx';
 import { initialsFromProfile } from '../utils/jwtPayload.js';
 
 const sidebarLinkClass = ({ isActive }) =>
@@ -68,12 +69,8 @@ export function CuentaLayout() {
       <aside className="w-full shrink-0 lg:w-64">
         <div className="glass-panel rounded-2xl p-6 shadow-card">
           <div className="flex flex-col items-center text-center lg:items-stretch lg:text-left">
-            <div
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-semibold text-white shadow-lg shadow-blue-500/25"
-              aria-hidden
-            >
-              {initials}
-            </div>
+            <ProfileAvatarEditable userKey={username} initials={initials} size="md" />
+            <p className="mt-2 text-xs text-text-muted">Toca la foto para cambiarla</p>
             <h2 className="mt-4 font-sans text-lg font-bold text-text-primary">{displayName || 'Usuario'}</h2>
             {mailShown ? (
               <p className="mt-1 text-sm text-text-muted">{mailShown}</p>
