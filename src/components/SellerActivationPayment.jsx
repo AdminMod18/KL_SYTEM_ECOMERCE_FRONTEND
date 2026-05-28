@@ -9,8 +9,13 @@ function formatCardNumber(value) {
 
 function formatExpiry(value) {
   const digits = String(value ?? '').replace(/\D/g, '').slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  if (digits.length === 0) return '';
+  if (digits.length === 1) return digits;
+  let month = digits.slice(0, 2);
+  if (Number(month) > 12) month = '12';
+  if (Number(month) === 0) month = '01';
+  if (digits.length === 2) return month;
+  return `${month}/${digits.slice(2, 4)}`;
 }
 
 function cardBrandLabel(num) {
@@ -21,15 +26,28 @@ function cardBrandLabel(num) {
   return 'PREMIUM';
 }
 
+/** Enmascara el PAN sin perder dígitos visibles (• no pasa por replace(/\D/g)). */
 function displayCardNumber(num) {
-  const formatted = formatCardNumber(num);
-  if (!formatted) return '•••• •••• •••• ••••';
-  const digits = formatted.replace(/\s/g, '');
-  const masked = digits
-    .split('')
-    .map((ch, i) => (i < digits.length - 4 ? '•' : ch))
-    .join('');
-  return formatCardNumber(masked) || '•••• •••• •••• ••••';
+  const digits = String(num ?? '').replace(/\D/g, '').slice(0, 16);
+  const groups = [];
+  for (let g = 0; g < 4; g += 1) {
+    let group = '';
+    for (let d = 0; d < 4; d += 1) {
+      const idx = g * 4 + d;
+      if (idx < digits.length) {
+        group += idx < digits.length - 4 ? '•' : digits[idx];
+      } else {
+        group += '•';
+      }
+    }
+    groups.push(group);
+  }
+  return groups.join(' ');
+}
+
+function displayExpiry(value) {
+  const formatted = formatExpiry(value);
+  return formatted || 'MM/YY';
 }
 
 const PLAN_OPTIONS = [
@@ -77,14 +95,19 @@ export function SellerActivationPayment({
   const showCard = tipoActivacion === 'ONLINE' || tipoActivacion === 'TARJETA';
   const brand = useMemo(() => cardBrandLabel(cardNumber), [cardNumber]);
   const holder = (cardHolderName || 'TU NOMBRE').toUpperCase().slice(0, 26);
+  const cardNumberPreview = useMemo(() => displayCardNumber(cardNumber), [cardNumber]);
+  const expiryPreview = useMemo(() => displayExpiry(expiry), [expiry]);
 
   function handleCardNumberChange(raw) {
-    const formatted = formatCardNumber(raw);
-    setCardNumber(formatted.replace(/\s/g, ''));
+    const digits = String(raw ?? '').replace(/\D/g, '').slice(0, 16);
+    setCardNumber(digits);
     if (tipoActivacion === 'TARJETA') {
-      const digits = formatted.replace(/\D/g, '');
       onUltimosDigitosChange(digits.slice(-4));
     }
+  }
+
+  function handleExpiryChange(raw) {
+    setExpiry(formatExpiry(raw));
   }
 
   function handleTipoChange(next) {
@@ -189,7 +212,7 @@ export function SellerActivationPayment({
                         <CreditCard className="h-8 w-8 text-white/70" />
                       </div>
                       <div>
-                        <p className="font-mono text-xl tracking-[0.18em] sm:text-2xl">{displayCardNumber(cardNumber)}</p>
+                        <p className="font-mono text-base tracking-[0.14em] sm:text-xl sm:tracking-[0.16em]">{cardNumberPreview}</p>
                         <div className="mt-5 flex items-end justify-between gap-4">
                           <div className="min-w-0">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-white/55">Titular</p>
@@ -197,7 +220,7 @@ export function SellerActivationPayment({
                           </div>
                           <div className="shrink-0 text-right">
                             <p className="text-[10px] uppercase tracking-[0.2em] text-white/55">Vence</p>
-                            <p className="font-mono text-sm font-semibold">{expiry || 'MM/YY'}</p>
+                            <p className="font-mono text-sm font-semibold tabular-nums">{expiryPreview}</p>
                           </div>
                         </div>
                       </div>
@@ -260,7 +283,7 @@ export function SellerActivationPayment({
                     inputMode="numeric"
                     autoComplete="cc-exp"
                     value={expiry}
-                    onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                    onChange={(e) => handleExpiryChange(e.target.value)}
                     onFocus={() => setFlipped(false)}
                     placeholder="MM/YY"
                     maxLength={5}
