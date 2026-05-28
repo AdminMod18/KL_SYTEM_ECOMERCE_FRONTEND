@@ -356,6 +356,55 @@ export function SellerOnboardingPanel() {
     setArchivosAdjuntos({});
   }, [tipoPersona]);
 
+  /** Si el id en sessionStorage cambia (crear solicitud, sync auth, otra pestaña misma ventana), vuelve a cargar. */
+  useEffect(() => {
+    const onSellerSession = () => {
+      if (normalizePath(window.location.pathname) !== '/seller') return;
+      void (async () => {
+        let id = getSellerSolicitudIdFromSession();
+        if (id == null && isAuthenticated) {
+          const match = await recoverSellerSolicitudSession(token, { email, username, force: false });
+          id = match?.id ?? getSellerSolicitudIdFromSession();
+        }
+        if (id != null) await refreshSolicitud(id);
+        else setSolicitud(null);
+      })();
+    };
+    window.addEventListener(SELLER_SESSION_CHANGED, onSellerSession);
+    return () => window.removeEventListener(SELLER_SESSION_CHANGED, onSellerSession);
+  }, [refreshSolicitud, token, email, username, isAuthenticated]);
+
+  /** Al volver a la pestaña, reconciliar con el servidor (p. ej. aprobaron la solicitud desde el panel Director). */
+  useEffect(() => {
+    let t;
+    const onVis = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (normalizePath(window.location.pathname) !== '/seller') return;
+      const id = getSellerSolicitudIdFromSession();
+      if (id == null) return;
+      clearTimeout(t);
+      t = setTimeout(() => void refreshSolicitud(id, { preserveLocalOnError: true }), 400);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [refreshSolicitud]);
+
+  const estado = estadoDesdeSolicitud(solicitud);
+  const solicitudId = solicitud?.id ?? null;
+  /** PENDIENTE o DEVUELTA: puede llamar a validacion-automatica (reintentos ilimitados, mismo id). */
+  const puedeRevalidar = estado === 'PENDIENTE' || estado === 'DEVUELTA';
+  const puedeActivar = estado === 'APROBADA';
+  const puedeRenovar = estado === 'EN_MORA';
+  const puedePublicar = estado === 'ACTIVA';
+  const onboardingBloqueado = estado === 'RECHAZADA' || estado === 'CANCELADA';
+  const esDevuelta = estado === 'DEVUELTA';
+  const esEnMora = estado === 'EN_MORA';
+  const activeStep = resolveActiveStep(solicitudId, estado, onboardingBloqueado);
+  const vencimientoSuscripcion = solicitud?.proximoVencimientoSuscripcion ?? null;
+
   /** Rellena fase 1 con datos del perfil de comprador (solo campos vacíos). */
   const autofillPerfilDoneRef = useRef(false);
   useEffect(() => {
@@ -417,55 +466,6 @@ export function SellerOnboardingPanel() {
     paisResidencia,
     ciudadResidencia,
   ]);
-
-  /** Si el id en sessionStorage cambia (crear solicitud, sync auth, otra pestaña misma ventana), vuelve a cargar. */
-  useEffect(() => {
-    const onSellerSession = () => {
-      if (normalizePath(window.location.pathname) !== '/seller') return;
-      void (async () => {
-        let id = getSellerSolicitudIdFromSession();
-        if (id == null && isAuthenticated) {
-          const match = await recoverSellerSolicitudSession(token, { email, username, force: false });
-          id = match?.id ?? getSellerSolicitudIdFromSession();
-        }
-        if (id != null) await refreshSolicitud(id);
-        else setSolicitud(null);
-      })();
-    };
-    window.addEventListener(SELLER_SESSION_CHANGED, onSellerSession);
-    return () => window.removeEventListener(SELLER_SESSION_CHANGED, onSellerSession);
-  }, [refreshSolicitud, token, email, username, isAuthenticated]);
-
-  /** Al volver a la pestaña, reconciliar con el servidor (p. ej. aprobaron la solicitud desde el panel Director). */
-  useEffect(() => {
-    let t;
-    const onVis = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (normalizePath(window.location.pathname) !== '/seller') return;
-      const id = getSellerSolicitudIdFromSession();
-      if (id == null) return;
-      clearTimeout(t);
-      t = setTimeout(() => void refreshSolicitud(id, { preserveLocalOnError: true }), 400);
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener('visibilitychange', onVis);
-    };
-  }, [refreshSolicitud]);
-
-  const estado = estadoDesdeSolicitud(solicitud);
-  const solicitudId = solicitud?.id ?? null;
-  /** PENDIENTE o DEVUELTA: puede llamar a validacion-automatica (reintentos ilimitados, mismo id). */
-  const puedeRevalidar = estado === 'PENDIENTE' || estado === 'DEVUELTA';
-  const puedeActivar = estado === 'APROBADA';
-  const puedeRenovar = estado === 'EN_MORA';
-  const puedePublicar = estado === 'ACTIVA';
-  const onboardingBloqueado = estado === 'RECHAZADA' || estado === 'CANCELADA';
-  const esDevuelta = estado === 'DEVUELTA';
-  const esEnMora = estado === 'EN_MORA';
-  const activeStep = resolveActiveStep(solicitudId, estado, onboardingBloqueado);
-  const vencimientoSuscripcion = solicitud?.proximoVencimientoSuscripcion ?? null;
 
   async function handleCrearSolicitud(e) {
     e.preventDefault();
