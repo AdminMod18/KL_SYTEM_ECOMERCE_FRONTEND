@@ -1,54 +1,13 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Building2, CreditCard, Lock, Sparkles, Wallet } from 'lucide-react';
-
-function formatCardNumber(value) {
-  const digits = String(value ?? '').replace(/\D/g, '').slice(0, 16);
-  return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-}
-
-function formatExpiry(value) {
-  const digits = String(value ?? '').replace(/\D/g, '').slice(0, 4);
-  if (digits.length === 0) return '';
-  if (digits.length === 1) return digits;
-  let month = digits.slice(0, 2);
-  if (Number(month) > 12) month = '12';
-  if (Number(month) === 0) month = '01';
-  if (digits.length === 2) return month;
-  return `${month}/${digits.slice(2, 4)}`;
-}
-
-function cardBrandLabel(num) {
-  const d = String(num ?? '').replace(/\D/g, '');
-  if (/^4/.test(d)) return 'VISA';
-  if (/^5[1-5]/.test(d)) return 'MASTERCARD';
-  if (/^3[47]/.test(d)) return 'AMEX';
-  return 'PREMIUM';
-}
-
-/** Enmascara el PAN sin perder dígitos visibles (• no pasa por replace(/\D/g)). */
-function displayCardNumber(num) {
-  const digits = String(num ?? '').replace(/\D/g, '').slice(0, 16);
-  const groups = [];
-  for (let g = 0; g < 4; g += 1) {
-    let group = '';
-    for (let d = 0; d < 4; d += 1) {
-      const idx = g * 4 + d;
-      if (idx < digits.length) {
-        group += idx < digits.length - 4 ? '•' : digits[idx];
-      } else {
-        group += '•';
-      }
-    }
-    groups.push(group);
-  }
-  return groups.join(' ');
-}
-
-function displayExpiry(value) {
-  const formatted = formatExpiry(value);
-  return formatted || 'MM/YY';
-}
+import { InteractiveCreditCard } from './InteractiveCreditCard.jsx';
+import {
+  cardBrandLabel,
+  displayCardNumber,
+  displayExpiry,
+  formatCardNumber,
+  formatExpiry,
+} from '../utils/creditCardUi.js';
 
 const PLAN_OPTIONS = [
   { value: 'MENSUAL', label: 'Mensual' },
@@ -69,6 +28,7 @@ const inputClass =
  * Panel de activación con tarjeta interactiva (solo UI; contratos API sin cambios).
  */
 export function SellerActivationPayment({
+  variant = 'activate',
   cardHolderName = 'TU NOMBRE',
   periodoSuscripcionPlan,
   onPeriodoChange,
@@ -85,6 +45,18 @@ export function SellerActivationPayment({
   loading = false,
   onSubmit,
 }) {
+  const isRenew = variant === 'renew';
+  const title = isRenew ? 'Renovar suscripción' : 'Activar tu tienda';
+  const subtitle = isRenew
+    ? 'Tu tienda está en mora. Completa el pago para volver a publicar productos.'
+    : 'Completa el pago para habilitar la publicación de productos.';
+  const submitLabel = loading
+    ? 'Procesando pago…'
+    : isRenew
+      ? 'Renovar suscripción'
+      : 'Activar tienda';
+  const eyebrow = isRenew ? 'Renovación' : 'Activación';
+
   const [cardNumber, setCardNumber] = useState(() => {
     const last4 = String(ultimosDigitosTarjetaActivacion ?? '').replace(/\D/g, '').slice(-4);
     return last4 ? `424242424242${last4}`.slice(-16) : '4242424242424242';
@@ -125,10 +97,10 @@ export function SellerActivationPayment({
           <div>
             <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
               <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-              Activación
+              {eyebrow}
             </p>
-            <h3 className="mt-1 font-sans text-lg font-semibold text-text-primary">Activar tu tienda</h3>
-            <p className="mt-1 text-sm text-text-secondary">Completa el pago para habilitar la publicación de productos.</p>
+            <h3 className="mt-1 font-sans text-lg font-semibold text-text-primary">{title}</h3>
+            <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>
           </div>
           <div className="rounded-2xl border border-border/60 bg-surface/50 px-4 py-3 text-right">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Total a pagar</p>
@@ -191,66 +163,16 @@ export function SellerActivationPayment({
         {showCard ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
             <div className="flex justify-center lg:justify-start">
-              <div className="w-full max-w-[420px] [perspective:1200px]">
-                <motion.div
-                  className="relative mx-auto aspect-[1.586/1] w-full max-w-[420px]"
-                  animate={{ rotateY: flipped ? 180 : 0 }}
-                  transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                  style={{ transformStyle: 'preserve-3d' }}
-                >
-                  <div
-                    className="absolute inset-0 overflow-hidden rounded-[1.35rem] border border-white/20 bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-900 p-6 text-white shadow-[0_24px_60px_rgba(15,23,42,0.45)] [backface-visibility:hidden]"
-                    style={{ transform: 'rotateY(0deg)' }}
-                  >
-                    <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
-                    <div className="pointer-events-none absolute bottom-0 left-0 h-28 w-28 rounded-full bg-blue-400/20 blur-2xl" />
-                    <div className="relative flex h-full flex-col justify-between">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="rounded-lg bg-white/10 px-3 py-1 text-[10px] font-bold tracking-[0.25em]">
-                          {brand}
-                        </div>
-                        <CreditCard className="h-8 w-8 text-white/70" />
-                      </div>
-                      <div>
-                        <p className="font-mono text-base tracking-[0.14em] sm:text-xl sm:tracking-[0.16em]">{cardNumberPreview}</p>
-                        <div className="mt-5 flex items-end justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/55">Titular</p>
-                            <p className="truncate text-sm font-semibold tracking-wide">{holder}</p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/55">Vence</p>
-                            <p className="font-mono text-sm font-semibold tabular-nums">{expiryPreview}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="absolute inset-0 overflow-hidden rounded-[1.35rem] border border-white/20 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white shadow-[0_24px_60px_rgba(15,23,42,0.45)] [backface-visibility:hidden]"
-                    style={{ transform: 'rotateY(180deg)' }}
-                  >
-                    <div className="mt-6 h-10 bg-black/45" />
-                    <div className="px-6 pt-6">
-                      <div className="ml-auto w-[82%] rounded-lg bg-white/95 px-4 py-3 text-right">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          {tipoActivacion === 'ONLINE' ? 'Token pasarela' : 'CVV'}
-                        </p>
-                        <p className="mt-1 font-mono text-lg tracking-[0.3em] text-slate-900">
-                          {tipoActivacion === 'ONLINE'
-                            ? tokenPasarela || '••••••••'
-                            : '•••'}
-                        </p>
-                      </div>
-                      <p className="mt-4 flex items-center gap-2 text-xs text-white/60">
-                        <Lock className="h-3.5 w-3.5" />
-                        Pago seguro simulado para activación de tienda
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
+              <InteractiveCreditCard
+                cardNumberPreview={cardNumberPreview}
+                expiryPreview={expiryPreview}
+                holder={holder}
+                brand={brand}
+                flipped={flipped}
+                backTitle={tipoActivacion === 'ONLINE' ? 'Token pasarela' : 'CVV'}
+                backValue={tipoActivacion === 'ONLINE' ? tokenPasarela || '••••••••' : '•••'}
+                securityNote="Pago seguro simulado para activación de tienda"
+              />
             </div>
 
             <div className="space-y-4">
@@ -380,7 +302,7 @@ export function SellerActivationPayment({
           className="premium-button inline-flex w-full items-center justify-center gap-2 bg-emerald-600 from-emerald-600 to-teal-600 shadow-emerald-500/25 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 sm:w-auto"
         >
           <Lock className="h-4 w-4" />
-          {loading ? 'Procesando pago…' : 'Activar tienda'}
+          {submitLabel}
         </button>
       </form>
     </section>

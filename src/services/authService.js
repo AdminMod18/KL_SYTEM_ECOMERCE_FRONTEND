@@ -14,7 +14,10 @@ export async function login(creds) {
   });
   clearSellerSolicitudIdSession();
   setSession({ accessToken: data.accessToken, roles: data.roles ?? [] });
-  await recoverSellerSolicitudSession(data.accessToken, { force: true });
+  await recoverSellerSolicitudSession(data.accessToken, {
+    force: true,
+    loginUsername: creds.username,
+  });
   window.dispatchEvent(new Event('auth:changed'));
   return data;
 }

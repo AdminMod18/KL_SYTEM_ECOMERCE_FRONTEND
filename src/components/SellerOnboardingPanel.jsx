@@ -5,6 +5,7 @@ import {
   createSolicitud,
   getSolicitud,
   validarSolicitud,
+  renovarSuscripcion,
 } from '../services/sellerService.js';
 import { refreshSession, sincronizarVendedorDesdeSolicitud } from '../services/authService.js';
 import { FORMATOS_LEGALES_VENDEDOR } from '../data/marketplaceContent.js';
@@ -128,9 +129,18 @@ const ONBOARDING_STEPS = [
 function resolveActiveStep(solicitudId, estado, onboardingBloqueado) {
   if (!solicitudId || onboardingBloqueado) return 1;
   if (estado === 'PENDIENTE' || estado === 'DEVUELTA') return 2;
-  if (estado === 'APROBADA') return 3;
+  if (estado === 'APROBADA' || estado === 'EN_MORA') return 3;
   if (estado === 'ACTIVA') return 4;
   return 1;
+}
+
+function formatFechaVencimiento(iso) {
+  if (!iso) return null;
+  try {
+    return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(iso));
+  } catch {
+    return String(iso);
+  }
 }
 
 function SellerStepper({ current }) {
@@ -191,7 +201,7 @@ function estadoDesdeSolicitud(s) {
 
 export function SellerOnboardingPanel() {
   const location = useLocation();
-  const { token, email, username, isAuthenticated } = useAuth();
+  const { token, email, username, isAuthenticated, rolesNormalized } = useAuth();
   const [solicitud, setSolicitud] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -257,6 +267,11 @@ export function SellerOnboardingPanel() {
     setTipoPersona(s.tipoPersona === 'JURIDICA' ? 'JURIDICA' : 'NATURAL');
   }, []);
 
+  const sellerIdentityKeys = useCallback(
+    () => [username, email, correoElectronico].filter(Boolean),
+    [username, email, correoElectronico],
+  );
+
   /**
    * @param {number|string} id
    * @param {{ preserveLocalOnError?: boolean }} [options] si true, un fallo de red no borra la solicitud en pantalla (útil tras POST).
@@ -278,9 +293,10 @@ export function SellerOnboardingPanel() {
         if (seq !== solicitudFetchSeq.current) {
           return;
         }
-        if (!preserveLocalOnError) {
+        const status = err?.response?.status;
+        if (!preserveLocalOnError && status === 404) {
           setSolicitud(null);
-          clearSellerSolicitudIdSession();
+          clearSellerSolicitudIdSession(username, sellerIdentityKeys());
         }
         setError(getRequestErrorMessage(err));
       } finally {
@@ -289,7 +305,7 @@ export function SellerOnboardingPanel() {
         }
       }
     },
-    [aplicarSolicitudEnFormulario],
+    [aplicarSolicitudEnFormulario, username, sellerIdentityKeys],
   );
 
   function normalizePath(p) {
@@ -304,8 +320,13 @@ export function SellerOnboardingPanel() {
     let cancel = false;
     (async () => {
       let id = getSellerSolicitudIdFromSession();
+      const esVendedor = rolesNormalized.includes('VENDEDOR');
       if (id == null && isAuthenticated) {
-        const match = await recoverSellerSolicitudSession(token, { email, username, force: false });
+        const match = await recoverSellerSolicitudSession(token, {
+          email,
+          username,
+          force: esVendedor,
+        });
         if (cancel) return;
         id = match?.id ?? getSellerSolicitudIdFromSession();
       }
@@ -320,7 +341,7 @@ export function SellerOnboardingPanel() {
     return () => {
       cancel = true;
     };
-  }, [location.pathname, refreshSolicitud, token, email, username, isAuthenticated]);
+  }, [location.pathname, refreshSolicitud, token, email, username, isAuthenticated, rolesNormalized]);
 
   useEffect(() => {
     setArchivosAdjuntos({});
@@ -367,10 +388,13 @@ export function SellerOnboardingPanel() {
   /** PENDIENTE o DEVUELTA: puede llamar a validacion-automatica (reintentos ilimitados, mismo id). */
   const puedeRevalidar = estado === 'PENDIENTE' || estado === 'DEVUELTA';
   const puedeActivar = estado === 'APROBADA';
+  const puedeRenovar = estado === 'EN_MORA';
   const puedePublicar = estado === 'ACTIVA';
   const onboardingBloqueado = estado === 'RECHAZADA' || estado === 'CANCELADA';
   const esDevuelta = estado === 'DEVUELTA';
+  const esEnMora = estado === 'EN_MORA';
   const activeStep = resolveActiveStep(solicitudId, estado, onboardingBloqueado);
+  const vencimientoSuscripcion = solicitud?.proximoVencimientoSuscripcion ?? null;
 
   async function handleCrearSolicitud(e) {
     e.preventDefault();
@@ -432,7 +456,7 @@ export function SellerOnboardingPanel() {
         tipoPersona,
         adjuntos,
       });
-      setSellerSolicitudIdSession(creada.id);
+      setSellerSolicitudIdSession(creada.id, username, sellerIdentityKeys());
       aplicarSolicitudEnFormulario({ ...creada });
       setTiendaActivaMsg(false);
       setProductoOk('');
@@ -493,6 +517,34 @@ export function SellerOnboardingPanel() {
     }
   }
 
+  function buildPagoActivacionBody() {
+    const monto = Number(String(montoActivacion ?? '').trim().replace(',', '.'));
+    const periodoSuscripcion = periodoSuscripcionPlan;
+    if (tipoActivacion === 'ONLINE') {
+      return {
+        tipo: 'ONLINE',
+        monto,
+        tokenPasarela: tokenPasarela.trim(),
+        periodoSuscripcion,
+      };
+    }
+    if (tipoActivacion === 'TARJETA') {
+      return {
+        tipo: 'TARJETA',
+        monto,
+        ultimosDigitosTarjeta: ultimosDigitosTarjetaActivacion.trim(),
+        periodoSuscripcion,
+      };
+    }
+    const comp = numeroComprobante.trim() || `WEB-ACT-${solicitudId}-${Date.now()}`;
+    return {
+      tipo: 'CONSIGNACION',
+      monto,
+      numeroComprobanteConsignacion: comp,
+      periodoSuscripcion,
+    };
+  }
+
   async function handleActivar(e) {
     e.preventDefault();
     if (!solicitudId) return;
@@ -502,7 +554,6 @@ export function SellerOnboardingPanel() {
       setError(errMonto);
       return;
     }
-    const monto = Number(String(montoActivacion ?? '').trim().replace(',', '.'));
     const errPago = validarCamposActivacionPorTipo(tipoActivacion, {
       tokenPasarela,
       ultimosDigitosTarjeta: ultimosDigitosTarjetaActivacion,
@@ -515,29 +566,10 @@ export function SellerOnboardingPanel() {
     solicitudFetchSeq.current += 1;
     setLoading(true);
     try {
-      let body;
-      const periodoSuscripcion = periodoSuscripcionPlan;
-      if (tipoActivacion === 'ONLINE') {
-        body = {
-          tipo: 'ONLINE',
-          monto,
-          tokenPasarela: tokenPasarela.trim(),
-          periodoSuscripcion,
-        };
-      } else if (tipoActivacion === 'TARJETA') {
-        const dig = ultimosDigitosTarjetaActivacion.trim();
-        body = { tipo: 'TARJETA', monto, ultimosDigitosTarjeta: dig, periodoSuscripcion };
-      } else {
-        const comp = numeroComprobante.trim() || `WEB-ACT-${solicitudId}-${Date.now()}`;
-        body = {
-          tipo: 'CONSIGNACION',
-          monto,
-          numeroComprobanteConsignacion: comp,
-          periodoSuscripcion,
-        };
-      }
+      const body = buildPagoActivacionBody();
       const actualizada = await activarSolicitud(solicitudId, body);
       aplicarSolicitudEnFormulario({ ...actualizada });
+      setSellerSolicitudIdSession(actualizada.id ?? solicitudId, username, sellerIdentityKeys());
       const idSync = Number(actualizada?.id ?? solicitudId);
       if (Number.isFinite(idSync)) {
         await refreshSolicitud(idSync, { preserveLocalOnError: true });
@@ -558,6 +590,45 @@ export function SellerOnboardingPanel() {
             /* token caducado u offline */
           }
         }
+        setTiendaActivaMsg(true);
+      }
+    } catch (err) {
+      setError(getRequestErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRenovarSuscripcion(e) {
+    e.preventDefault();
+    if (!solicitudId) return;
+    setError('');
+    const errMonto = validarMontoActivacion(montoActivacion);
+    if (errMonto) {
+      setError(errMonto);
+      return;
+    }
+    const errPago = validarCamposActivacionPorTipo(tipoActivacion, {
+      tokenPasarela,
+      ultimosDigitosTarjeta: ultimosDigitosTarjetaActivacion,
+      numeroComprobante,
+    });
+    if (errPago) {
+      setError(errPago);
+      return;
+    }
+    solicitudFetchSeq.current += 1;
+    setLoading(true);
+    try {
+      const body = buildPagoActivacionBody();
+      const actualizada = await renovarSuscripcion(solicitudId, body);
+      aplicarSolicitudEnFormulario({ ...actualizada });
+      setSellerSolicitudIdSession(actualizada.id ?? solicitudId, username, sellerIdentityKeys());
+      const idSync = Number(actualizada?.id ?? solicitudId);
+      if (Number.isFinite(idSync)) {
+        await refreshSolicitud(idSync, { preserveLocalOnError: true });
+      }
+      if (actualizada.estado === 'ACTIVA') {
         setTiendaActivaMsg(true);
       }
     } catch (err) {
@@ -700,7 +771,7 @@ export function SellerOnboardingPanel() {
 
   function handleNuevaSolicitud() {
     solicitudFetchSeq.current += 1;
-    clearSellerSolicitudIdSession();
+    clearSellerSolicitudIdSession(username, sellerIdentityKeys());
     setSolicitud(null);
     setLoading(false);
     setError('');
@@ -794,6 +865,16 @@ export function SellerOnboardingPanel() {
             <p className="font-semibold">Solicitud devuelta</p>
             <p className="mt-1 text-xs leading-relaxed opacity-90">
               Corrige documento o score y vuelve a validar en el paso 2.
+            </p>
+          </div>
+        ) : null}
+
+        {esEnMora ? (
+          <div className="mt-4 rounded-xl border border-orange-400/50 bg-orange-500/10 px-4 py-3 text-sm text-orange-950 dark:text-orange-100" role="status">
+            <p className="font-semibold">Suscripción vencida (EN_MORA)</p>
+            <p className="mt-1 text-xs leading-relaxed opacity-90">
+              Renueva el pago para volver a publicar productos.
+              {vencimientoSuscripcion ? ` Vencimiento: ${formatFechaVencimiento(vencimientoSuscripcion)}.` : ''}
             </p>
           </div>
         ) : null}
@@ -1087,8 +1168,9 @@ export function SellerOnboardingPanel() {
         </section>
       ) : null}
 
-      {activeStep === 3 && solicitudId && puedeActivar ? (
+      {activeStep === 3 && solicitudId && (puedeActivar || puedeRenovar) ? (
         <SellerActivationPayment
+          variant={puedeRenovar ? 'renew' : 'activate'}
           cardHolderName={
             [nombres, apellidos].filter(Boolean).join(' ') ||
             solicitud?.nombreVendedor ||
@@ -1108,12 +1190,17 @@ export function SellerOnboardingPanel() {
           numeroComprobante={numeroComprobante}
           onNumeroComprobanteChange={setNumeroComprobante}
           loading={loading}
-          onSubmit={handleActivar}
+          onSubmit={puedeRenovar ? handleRenovarSuscripcion : handleActivar}
         />
       ) : null}
 
       {activeStep === 4 && puedePublicar ? (
-      <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+        <section className="glass-panel rounded-2xl p-5 shadow-card sm:p-6">
+          {vencimientoSuscripcion ? (
+            <p className="mb-4 rounded-xl border border-border/60 bg-surface/40 px-4 py-3 text-xs text-text-secondary">
+              Suscripción activa{vencimientoSuscripcion ? ` · próximo vencimiento: ${formatFechaVencimiento(vencimientoSuscripcion)}` : ''}.
+            </p>
+          ) : null}
         <h3 className="font-sans text-base font-semibold text-text-primary">Publica tu primer producto</h3>
         <p className="mt-1 text-sm text-text-secondary">Tu tienda está activa. Completa los datos esenciales y publica.</p>
           <form onSubmit={handleCrearProducto} className="mt-6 space-y-6">

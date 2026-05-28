@@ -143,9 +143,9 @@ export function elegirSolicitudPreferida(items) {
 
 /**
  * Busca solicitudes del usuario autenticado por correo, usuario o documento.
- * @param {{ email?: string | null; username?: string | null }} identidad
+ * @param {{ email?: string | null; username?: string | null; documentoIdentidad?: string | null }} identidad
  */
-export async function buscarSolicitudDelUsuario({ email, username }) {
+export async function buscarSolicitudDelUsuario({ email, username, documentoIdentidad }) {
   const terminos = [];
   const push = (v) => {
     const t = (v ?? '').trim();
@@ -156,6 +156,7 @@ export async function buscarSolicitudDelUsuario({ email, username }) {
   };
   push(email);
   push(username);
+  push(documentoIdentidad);
 
   const acumulado = [];
   for (const q of terminos) {
@@ -175,16 +176,20 @@ export async function buscarSolicitudDelUsuario({ email, username }) {
     }
   }
 
+  if (!acumulado.length) return null;
+
   const emailNorm = (email ?? '').trim().toLowerCase();
   const userNorm = (username ?? '').trim().toLowerCase();
+  const docNorm = (documentoIdentidad ?? '').replace(/\W/g, '').toLowerCase();
+
   const filtradas = acumulado.filter((row) => {
     const correo = String(row.correoElectronico ?? '').trim().toLowerCase();
-    const doc = String(row.documentoIdentidad ?? '').trim().toLowerCase();
+    const doc = String(row.documentoIdentidad ?? '').replace(/\W/g, '').toLowerCase();
     if (emailNorm && correo === emailNorm) return true;
-    if (userNorm && (correo === userNorm || doc === userNorm)) return true;
+    if (userNorm && (correo === userNorm || doc === userNorm.replace(/\W/g, ''))) return true;
+    if (docNorm && doc && (doc === docNorm || doc.includes(docNorm) || docNorm.includes(doc))) return true;
     if (emailNorm && correo.includes(emailNorm)) return true;
-    if (userNorm && userNorm.length >= 4 && (correo.includes(userNorm) || doc.includes(userNorm))) return true;
-    return terminos.length === 1;
+    return false;
   });
 
   return elegirSolicitudPreferida(filtradas.length ? filtradas : acumulado);

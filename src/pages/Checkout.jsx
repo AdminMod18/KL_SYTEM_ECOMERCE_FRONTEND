@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { CheckoutForm } from '../components/CheckoutForm.jsx';
+import { CheckoutPaymentPanel } from '../components/CheckoutPaymentPanel.jsx';
 import { OrdenDesglosePanel } from '../components/OrdenDesglosePanel.jsx';
 import { createOrden } from '../services/orderService.js';
 import { saveCheckoutRecibo } from '../services/checkoutReciboStorage.js';
 import {
-  TOKEN_SIMULAR_RECHAZO,
   getMensajeFalloPago,
   pagarOrdenConsignacion,
   pagarOrdenOnline,
@@ -16,7 +16,6 @@ import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
 import { formatMoney } from '../utils/formatMoney.js';
-import { motion } from 'framer-motion';
 
 /** Fases del checkout (orden y pago desacoplados). */
 const CHECKOUT_PHASE = {
@@ -69,7 +68,7 @@ function StepIndicator({ phase }) {
 
 export function Checkout() {
   const navigate = useNavigate();
-  const { username } = useAuth();
+  const { username, displayName } = useAuth();
   const { items, total, clear } = useCart();
   const [clienteId, setClienteId] = useState(() => username || 'cli-web-001');
   const [tipoEntrega, setTipoEntrega] = useState('DOMICILIO');
@@ -256,80 +255,22 @@ export function Checkout() {
           </aside>
           <div className="space-y-6 lg:col-span-3">
             <OrdenDesglosePanel orden={orden} />
-            <motion.div whileHover={{ y: -3 }} className="glass-panel rounded-2xl p-5 shadow-card">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-text-muted">Método de pago (demo)</h3>
-              <fieldset className="mt-4 space-y-3">
-                <legend className="sr-only">Tipo de pago</legend>
-                <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 ${
-                    tipoPago === 'CONSIGNACION' ? 'border-brand bg-brand-soft/30' : 'border-border bg-surface'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="tipoPago"
-                    checked={tipoPago === 'CONSIGNACION'}
-                    onChange={() => {
-                      setTipoPago('CONSIGNACION');
-                      setPagoPrepError('');
-                    }}
-                    className="mt-1 text-brand"
-                  />
-                  <span>
-                    <span className="font-medium text-text-primary">Consignación</span>
-                    <span className="mt-0.5 block text-xs text-text-secondary">
-                      Registro simulado con comprobante automático (<code className="text-[11px]">CONSIGNACION</code>).
-                    </span>
-                  </span>
-                </label>
-                <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 ${
-                    tipoPago === 'ONLINE' ? 'border-brand bg-brand-soft/30' : 'border-border bg-surface'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="tipoPago"
-                    checked={tipoPago === 'ONLINE'}
-                    onChange={() => {
-                      setTipoPago('ONLINE');
-                      setPagoPrepError('');
-                    }}
-                    className="mt-1 text-brand"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="font-medium text-text-primary">Online (pasarela simulada)</span>
-                    <span className="mt-0.5 block text-xs text-text-secondary">
-                      Envía <code className="text-[11px]">tokenPasarela</code>. Para rechazo de demo usa{' '}
-                      <code className="break-all text-[11px]">{TOKEN_SIMULAR_RECHAZO}</code>; cualquier otro valor suele autorizar.
-                    </span>
-                  </span>
-                </label>
-              </fieldset>
-              {tipoPago === 'ONLINE' ? (
-                <div className="mt-4">
-                  <label htmlFor="tokenPasarela" className="text-sm font-medium text-text-primary">
-                    Token pasarela
-                  </label>
-                  <input
-                    id="tokenPasarela"
-                    autoComplete="off"
-                    value={tokenPasarela}
-                    onChange={(e) => {
-                      setTokenPasarela(e.target.value);
-                      setPagoPrepError('');
-                    }}
-                    placeholder={TOKEN_SIMULAR_RECHAZO}
-                    className="mt-2 w-full rounded-xl border border-border-strong bg-page px-4 py-3 font-mono text-sm focus:border-brand focus:ring-2 focus:ring-brand/25"
-                  />
-                </div>
-              ) : null}
-              {pagoPrepError ? (
-                <p className="mt-3 text-sm text-danger" role="alert">
-                  {pagoPrepError}
-                </p>
-              ) : null}
-            </motion.div>
+            <CheckoutPaymentPanel
+              cardHolderName={displayName || username || 'Cliente'}
+              total={orden.total}
+              tipoPago={tipoPago}
+              onTipoPagoChange={(next) => {
+                setTipoPago(next);
+                setPagoPrepError('');
+              }}
+              tokenPasarela={tokenPasarela}
+              onTokenChange={(value) => {
+                setTokenPasarela(value);
+                setPagoPrepError('');
+              }}
+              prepError={pagoPrepError}
+              onPay={handlePagar}
+            />
             <div
               id="orden-creada-cart-warning"
               className="rounded-xl border border-cart-badge/40 bg-cart-badge/10 px-4 py-3 text-sm text-text-primary"
@@ -338,13 +279,6 @@ export function Checkout() {
               La orden ya fue creada. Cambios en el carrito no afectan esta orden.
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={handlePagar}
-                className="flex-1 rounded-xl bg-success py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
-              >
-                Pagar ahora
-              </button>
               <span
                 aria-describedby="orden-creada-cart-warning"
                 className="flex flex-1 cursor-not-allowed select-none items-center justify-center rounded-xl border border-border bg-page py-3 text-center text-sm font-semibold text-text-muted opacity-70"
