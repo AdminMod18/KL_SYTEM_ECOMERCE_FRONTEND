@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { login as loginRequest } from '../services/authService.js';
-import { SITE_NAME } from '../data/marketplaceContent.js';
+import { BrandLogo } from '../components/BrandLogo.jsx';
 import { getRequestErrorMessage } from '../utils/apiError.js';
 import { motion } from 'framer-motion';
 import { LockKeyhole } from 'lucide-react';
@@ -46,7 +46,7 @@ export function Login() {
         animate={{ opacity: 1, x: 0 }}
         className="bg-mesh hidden flex-col justify-center rounded-3xl border border-white/40 bg-surface p-10 shadow-card lg:flex"
       >
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-badge-text">{SITE_NAME}</p>
+        <BrandLogo to="/" size="lg" className="mb-2" />
         <h1 className="mt-4 font-sans text-4xl font-bold tracking-tight text-text-primary md:text-5xl">
           Welcome back <span className="gradient-text">builder</span>
         </h1>

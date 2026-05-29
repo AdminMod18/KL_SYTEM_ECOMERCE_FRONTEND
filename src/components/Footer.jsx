@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { FOOTER_NAV, SITE_NAME } from '../data/marketplaceContent.js';
+import { BrandLogo } from './BrandLogo.jsx';
 import { ArrowUpRight } from 'lucide-react';
 
 function SocialIcon({ href, label, children }) {
@@ -25,7 +26,7 @@ export function Footer({ variant = 'storefront' }) {
         <div className="mx-auto max-w-wide px-4 py-12 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-6 border-b border-authBorder pb-10 text-center sm:flex-row sm:text-left">
             <div>
-              <p className="font-semibold text-authText">{SITE_NAME}</p>
+            <BrandLogo to="/" size="sm" />
               <p className="mt-2 max-w-md text-sm text-authSecondary">
                 Created with Figma Make · Premium technology marketplace experience.
               </p>
@@ -58,9 +59,7 @@ export function Footer({ variant = 'storefront' }) {
       <div className="mx-auto max-w-wide px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           <div>
-            <p className="text-lg font-bold tracking-tight text-text-primary">
-              {SITE_NAME} <span className="gradient-text">Premium</span>
-            </p>
+            <BrandLogo to="/" size="md" className="mb-1" />
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-text-secondary">{FOOTER_NAV.tagline}</p>
             <div className="mt-6 flex gap-3">
               <SocialIcon href="#" label="Facebook">

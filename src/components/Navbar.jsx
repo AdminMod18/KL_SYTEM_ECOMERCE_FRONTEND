@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import { useAuth } from '../hooks/useAuth.js';
-import { SITE_NAME } from '../data/marketplaceContent.js';
+import { BrandLogo } from './BrandLogo.jsx';
 import { isAdmin } from '../auth/roles.js';
 import { ProfileAvatar } from './ProfileAvatar.jsx';
-import { Moon, Search, ShoppingBag, Sun, UserRound, X, Menu, Sparkles } from 'lucide-react';
+import { Moon, Search, ShoppingBag, Sun, UserRound, X, Menu } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { initialsFromProfile } from '../utils/jwtPayload.js';
@@ -24,12 +24,15 @@ function authNavLink({ isActive }) {
 
 export function Navbar({ variant = 'storefront' }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { items } = useCart();
   const { isAuthenticated, logout, roles, username, email, displayName } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const verAdmin = isAdmin(roles);
   const count = items.reduce((a, i) => a + i.cantidad, 0);
   const [open, setOpen] = useState(false);
+  const [navQuery, setNavQuery] = useState('');
   const isAuth = variant === 'auth';
   const navClass = isAuth ? authNavLink : storefrontNavLink;
   const navInitials = initialsFromProfile({
@@ -37,6 +40,30 @@ export function Navbar({ variant = 'storefront' }) {
     email,
     name: displayName !== username ? displayName : null,
   });
+
+  useEffect(() => {
+    if (location.pathname === '/catalog') {
+      setNavQuery(searchParams.get('q') ?? '');
+    }
+  }, [location.pathname, searchParams]);
+
+  function submitNavSearch(e) {
+    e?.preventDefault?.();
+    const q = navQuery.trim();
+    setOpen(false);
+    if (location.pathname === '/catalog') {
+      navigate(q ? `/catalog?q=${encodeURIComponent(q)}` : '/catalog', { replace: true });
+      return;
+    }
+    navigate(q ? `/catalog?q=${encodeURIComponent(q)}` : '/catalog');
+  }
+
+  function clearNavSearch() {
+    setNavQuery('');
+    if (location.pathname === '/catalog') {
+      navigate('/catalog', { replace: true });
+    }
+  }
 
   function handleLogout() {
     logout();
@@ -57,15 +84,7 @@ export function Navbar({ variant = 'storefront' }) {
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link
-            to="/"
-            className="inline-flex shrink-0 items-center gap-2 text-lg font-bold tracking-tight text-text-primary"
-          >
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-500/25">
-              <Sparkles className="h-4 w-4" />
-            </span>
-            {SITE_NAME}
-          </Link>
+          <BrandLogo to="/" size="md" className="min-w-0" />
         </div>
 
         <nav className={`hidden items-center gap-0.5 lg:flex ${isAuth ? '' : ''}`}>
@@ -81,7 +100,7 @@ export function Navbar({ variant = 'storefront' }) {
                 Checkout
               </NavLink>
               <NavLink to="/become-seller" className={navClass}>
-                Seller
+                Vendedor
               </NavLink>
               {isAuthenticated ? (
                 <NavLink to="/cuenta/perfil" className={navClass}>
@@ -107,8 +126,8 @@ export function Navbar({ variant = 'storefront' }) {
               <NavLink to="/catalog" className={navClass}>
                 Catálogo
               </NavLink>
-              <NavLink to="/become-seller" className={navClass}>
-                Vender
+              <NavLink to="/seller" className={navClass}>
+                Vendedor
               </NavLink>
               {isAuthenticated && verAdmin ? (
                 <>
@@ -119,7 +138,7 @@ export function Navbar({ variant = 'storefront' }) {
                     BAM
                   </NavLink>
                   <NavLink to="/director/admin" className={navClass}>
-                    Admin
+                    Administración
                   </NavLink>
                 </>
               ) : null}
@@ -128,20 +147,36 @@ export function Navbar({ variant = 'storefront' }) {
         </nav>
 
         {!isAuth && (
-          <div className="mx-auto hidden max-w-lg flex-1 px-4 lg:block">
+          <form
+            onSubmit={submitNavSearch}
+            className="mx-auto hidden max-w-lg flex-1 px-4 lg:block"
+            role="search"
+          >
             <label htmlFor="nav-search" className="sr-only">
-              Buscar
+              Buscar productos
             </label>
             <div className="glass-panel relative rounded-full border-white/50 px-1 py-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden />
               <input
                 id="nav-search"
                 type="search"
-                placeholder="Buscar"
-                className="w-full rounded-full border-0 bg-search-field py-2 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+                value={navQuery}
+                onChange={(e) => setNavQuery(e.target.value)}
+                placeholder="Buscar productos…"
+                className="w-full rounded-full border-0 bg-search-field py-2 pl-10 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
+              {navQuery ? (
+                <button
+                  type="button"
+                  onClick={clearNavSearch}
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-text-muted transition hover:bg-black/5 hover:text-text-primary"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
-          </div>
+          </form>
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
@@ -284,8 +319,8 @@ export function Navbar({ variant = 'storefront' }) {
                 <NavLink to="/catalog" className={navClass} onClick={() => setOpen(false)}>
                   Catálogo
                 </NavLink>
-                <NavLink to="/become-seller" className={navClass} onClick={() => setOpen(false)}>
-                  Vender
+                <NavLink to="/seller" className={navClass} onClick={() => setOpen(false)}>
+                  Vendedor
                 </NavLink>
                 {isAuthenticated ? (
                   <NavLink to="/cuenta/perfil" className={navClass} onClick={() => setOpen(false)}>
@@ -301,12 +336,38 @@ export function Navbar({ variant = 'storefront' }) {
                       BAM
                     </NavLink>
                     <NavLink to="/director/admin" className={navClass} onClick={() => setOpen(false)}>
-                      Admin
+                      Administración
                     </NavLink>
                   </>
                 ) : null}
+                <form onSubmit={submitNavSearch} className="mt-2 px-3 lg:hidden" role="search">
+                  <label htmlFor="nav-search-mobile" className="sr-only">
+                    Buscar productos
+                  </label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <input
+                      id="nav-search-mobile"
+                      type="search"
+                      value={navQuery}
+                      onChange={(e) => setNavQuery(e.target.value)}
+                      placeholder="Buscar productos…"
+                      className="w-full rounded-xl border border-border-strong bg-page py-2.5 pl-9 pr-9 text-sm"
+                    />
+                    {navQuery ? (
+                      <button
+                        type="button"
+                        onClick={clearNavSearch}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted"
+                        aria-label="Limpiar"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                </form>
                 <NavLink to="/cart" className={navClass} onClick={() => setOpen(false)}>
-                  Carrito
+                  Carrito{count > 0 ? ` (${count})` : ''}
                 </NavLink>
                 {isAuthenticated ? (
                   <button type="button" className={`${navClass} text-left`} onClick={handleLogout}>

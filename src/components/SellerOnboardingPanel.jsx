@@ -8,8 +8,12 @@ import {
   renovarSuscripcion,
 } from '../services/sellerService.js';
 import { refreshSession, sincronizarVendedorDesdeSolicitud } from '../services/authService.js';
+<<<<<<< HEAD
 import { registrarSolicitudAprobada } from '../services/analyticsService.js';
 import { FORMATOS_LEGALES_VENDEDOR } from '../data/marketplaceContent.js';
+=======
+import { FORMATOS_LEGALES_VENDEDOR, SITE_NAME } from '../data/marketplaceContent.js';
+>>>>>>> cb9a7ca1511811375ea3ea83d43f6ce1734eb16c
 import { createProducto } from '../services/productService.js';
 import { findUsuarioByIdentity } from '../services/userService.js';
 import { buildCategoriasFromSelection } from '../data/productCategories.js';
@@ -1262,7 +1266,7 @@ export function SellerOnboardingPanel() {
             [nombres, apellidos].filter(Boolean).join(' ') ||
             solicitud?.nombreVendedor ||
             nombreVendedor ||
-            'Vendedor Mercado'
+            `Vendedor ${SITE_NAME}`
           }
           periodoSuscripcionPlan={periodoSuscripcionPlan}
           onPeriodoChange={setPeriodoSuscripcionPlan}
