@@ -24,7 +24,7 @@ export function BrandLogo({ to = '/', size = 'md', className = '', imgClassName 
       <img
         src={LOGO_SRC}
         alt={LOGO_ALT}
-        className={`${heightClass} w-auto max-w-[min(100%,220px)] object-contain object-left ${imgClassName}`.trim()}
+        className={`${heightClass} w-auto max-w-[min(100%,260px)] object-contain object-left drop-shadow-[0_1px_8px_rgba(37,99,235,0.25)] ${imgClassName}`.trim()}
       />
       {showTextFallback ? (
         <span className="sr-only">{SITE_NAME}</span>
