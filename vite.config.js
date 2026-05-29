@@ -20,10 +20,15 @@ export default defineConfig({
       '/api/ordenes': microProxy(9006, 'ordenes'),
       '/api/pagos': microProxy(9005, 'pagos'),
       '/api/solicitudes': microProxy(9003, 'solicitudes'),
-      '/api/analytics': {
+      '/api/kpis': {
         target: 'http://127.0.0.1:9009',
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api\/analytics/, ''),
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
+      '/api/eventos': {
+        target: 'http://127.0.0.1:9009',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api/, ''),
       },
       '/api/admin': {
         target: 'http://127.0.0.1:9010',

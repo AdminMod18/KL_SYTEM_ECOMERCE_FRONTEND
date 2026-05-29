@@ -52,7 +52,7 @@ jobs:
             exit 1
           fi
           export VITE_ADMIN_URL="${VITE_ADMIN_URL:-${VITE_API_URL%/}/admin}"
-          export VITE_ANALYTICS_URL="${VITE_ANALYTICS_URL:-${VITE_API_URL%/}/analytics}"
+          export VITE_ANALYTICS_URL="${VITE_ANALYTICS_URL:-${VITE_API_URL%/}}"
           npm ci
           npm run build
           test -f dist/assets/brand/kl-ecommerce-logo.png || (echo "::error::Falta logo en dist/assets/brand" && exit 1)

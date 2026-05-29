@@ -72,7 +72,7 @@ export function PanelBam() {
       {error ? (
         <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error} · Asegúrese de que analytics-service esté en ejecución (p. ej. puerto 9009) y el proxy{' '}
-          <code className="text-xs">/api/analytics</code> configurado.
+          <code className="text-xs">/api/kpis</code> configurado.
         </div>
       ) : null}
 

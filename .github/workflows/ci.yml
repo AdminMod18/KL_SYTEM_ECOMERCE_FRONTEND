@@ -38,7 +38,7 @@ jobs:
         run: |
           export VITE_API_URL="${VITE_API_URL:-/api}"
           export VITE_ADMIN_URL="${VITE_ADMIN_URL:-/api/admin}"
-          export VITE_ANALYTICS_URL="${VITE_ANALYTICS_URL:-/api/analytics}"
+          export VITE_ANALYTICS_URL="${VITE_ANALYTICS_URL:-${VITE_API_URL%/}}"
           export VITE_API_TIMEOUT="${VITE_API_TIMEOUT:-20000}"
           npm run build
 

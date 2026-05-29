@@ -1,12 +1,49 @@
 import axios from 'axios';
 
+/**
+ * URL base de analytics-service.
+ * En prod (CloudFront) la función strip-api-prefix convierte /api/kpis → ALB /kpis.
+ * No usar …/api/analytics: tras quitar /api queda /analytics/kpis, ruta sin regla en ALB → 404 → HTML del SPA.
+ */
 function analyticsBase() {
-  return (import.meta.env.VITE_ANALYTICS_URL ?? '/api/analytics').replace(/\/$/, '');
+  const explicit = String(import.meta.env.VITE_ANALYTICS_URL ?? '').trim().replace(/\/$/, '');
+  if (explicit) {
+    if (/\/analytics$/i.test(explicit)) {
+      return explicit.replace(/\/analytics$/i, '');
+    }
+    return explicit;
+  }
+  return String(import.meta.env.VITE_API_URL ?? '/api').trim().replace(/\/$/, '');
+}
+
+function assertJsonObject(data, resourceLabel) {
+  if (data && typeof data === 'object' && !Array.isArray(data)) return data;
+  if (typeof data === 'string' && /<(?:!DOCTYPE|html)/i.test(data)) {
+    throw new Error(
+      `${resourceLabel}: la URL de analytics devolvió HTML del frontend. Use VITE_ANALYTICS_URL como …/api (no …/api/analytics).`,
+    );
+  }
+  throw new Error(`${resourceLabel}: respuesta inesperada del servidor.`);
+}
+
+/** @param {Record<string, unknown>} raw */
+function normalizarKpis(raw) {
+  return {
+    totalEventos: Number(raw.totalEventos ?? raw.totalEvents ?? 0),
+    comprasRegistradas: Number(raw.comprasRegistradas ?? raw.purchases ?? 0),
+    ingresosComprasAcumulados: raw.ingresosComprasAcumulados ?? raw.totalRevenue ?? null,
+    solicitudesAprobadasRegistradas: Number(raw.solicitudesAprobadasRegistradas ?? raw.approvedRequests ?? 0),
+    consultasCatalogoRegistradas: Number(raw.consultasCatalogoRegistradas ?? raw.catalogViews ?? 0),
+    skuCompraMasFrecuente: raw.skuCompraMasFrecuente ?? raw.topPurchaseSku ?? null,
+    textoConsultaMasFrecuente: raw.textoConsultaMasFrecuente ?? raw.topCatalogQuery ?? null,
+    ultimoEventoEn: raw.ultimoEventoEn ?? raw.lastEventAt ?? null,
+    tendenciasMarketingResumen: raw.tendenciasMarketingResumen ?? raw.marketingSummary ?? null,
+  };
 }
 
 export async function obtenerKpis() {
   const { data } = await axios.get(`${analyticsBase()}/kpis`, { timeout: 15000 });
-  return data;
+  return normalizarKpis(assertJsonObject(data, 'KPIs'));
 }
 
 const TIPOS_EVENTO_VALIDOS = /** @type {const} */ (['COMPRA', 'SOLICITUD_APROBADA', 'CONSULTA_CATALOGO']);
