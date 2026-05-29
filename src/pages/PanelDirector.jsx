@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getSolicitud, getSolicitudes, renovarSuscripcion, validarSolicitud } from '../services/sellerService.js';
+import { registrarSolicitudAprobada } from '../services/analyticsService.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
 import { motion } from 'framer-motion';
 
@@ -133,6 +134,7 @@ export function PanelDirector() {
         payload.score = Number(valScore);
       }
       const actualizada = await validarSolicitud(detalle.id, payload);
+      await registrarSolicitudAprobada(actualizada);
       setDetalle(actualizada);
       setValidacionMsg(`Estado tras validación: ${actualizada.estado}`);
       await ejecutarBusqueda();

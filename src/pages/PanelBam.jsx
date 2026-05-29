@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { obtenerKpis } from '../services/analyticsService.js';
 import { getRequestErrorMessage } from '../utils/apiError.js';
+import { formatMoney } from '../utils/formatMoney.js';
 import { motion } from 'framer-motion';
 
 export function PanelBam() {
@@ -9,24 +10,26 @@ export function PanelBam() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancel = false;
+  const cargarKpis = useCallback(async ({ cancelado } = {}) => {
     setLoading(true);
     setError('');
-    obtenerKpis()
-      .then((d) => {
-        if (!cancel) setKpi(d);
-      })
-      .catch((e) => {
-        if (!cancel) setError(getRequestErrorMessage(e));
-      })
-      .finally(() => {
-        if (!cancel) setLoading(false);
-      });
-    return () => {
-      cancel = true;
-    };
+    try {
+      const data = await obtenerKpis();
+      if (!cancelado?.current) setKpi(data);
+    } catch (e) {
+      if (!cancelado?.current) setError(getRequestErrorMessage(e));
+    } finally {
+      if (!cancelado?.current) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    const cancelado = { current: false };
+    void cargarKpis({ cancelado });
+    return () => {
+      cancelado.current = true;
+    };
+  }, [cargarKpis]);
 
   return (
     <div>
@@ -37,11 +40,19 @@ export function PanelBam() {
             Tablero de control <span className="gradient-text">(KPIs)</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-            HU-23: KPIs demo desde analytics-service. El catálogo envía <code className="text-xs">CONSULTA_CATALOGO</code> vía{' '}
-            <code className="text-xs">POST /eventos</code>.
+            Indicadores en tiempo real desde analytics-service, alimentados por compras pagadas, validaciones aprobadas y consultas
+            del catálogo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void cargarKpis()}
+            className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
+          >
+            {loading ? 'Actualizando...' : 'Actualizar KPIs'}
+          </button>
           <Link
             to="/director"
             className="rounded-xl border border-border-strong px-4 py-2 text-sm font-semibold text-text-primary hover:bg-page"
@@ -78,7 +89,7 @@ export function PanelBam() {
           <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Ingresos compras</p>
             <p className="mt-2 font-sans text-2xl font-bold tabular-nums text-text-primary">
-              {kpi.ingresosComprasAcumulados != null ? String(kpi.ingresosComprasAcumulados) : '—'}
+              {kpi.ingresosComprasAcumulados != null ? formatMoney(kpi.ingresosComprasAcumulados) : '—'}
             </p>
           </motion.div>
           <motion.div whileHover={{ y: -4 }} className="glass-panel premium-card-hover rounded-2xl p-5">

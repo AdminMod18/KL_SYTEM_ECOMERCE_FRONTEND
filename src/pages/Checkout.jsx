@@ -7,6 +7,7 @@ import { CheckoutStepper } from '../components/CheckoutStepper.jsx';
 import { OrdenDesglosePanel } from '../components/OrdenDesglosePanel.jsx';
 import { createOrden } from '../services/orderService.js';
 import { saveCheckoutRecibo } from '../services/checkoutReciboStorage.js';
+import { registrarCompraOrden } from '../services/analyticsService.js';
 import {
   getMensajeFalloPago,
   pagarOrdenConsignacion,
@@ -89,7 +90,7 @@ export function Checkout() {
         ciudadEnvio: ciudadEnvio.trim() || undefined,
         direccionEnvio: direccionEnvio.trim() || undefined,
       });
-      setOrden(nueva);
+      setOrden({ ...nueva, lineas: Array.isArray(nueva?.lineas) && nueva.lineas.length ? nueva.lineas : lineas });
       setPagoError('');
       setPhase(CHECKOUT_PHASE.ORDEN_CREADA);
     } catch (err) {
@@ -113,6 +114,7 @@ export function Checkout() {
         tipoPago === 'ONLINE'
           ? await pagarOrdenOnline(orden, tokenPasarela)
           : await pagarOrdenConsignacion(orden);
+      await registrarCompraOrden(orden);
       const ref = referenciaClienteOrden(orden.ordenId);
       const payload = { orden, pago, referenciaCliente: ref };
       saveCheckoutRecibo(payload);

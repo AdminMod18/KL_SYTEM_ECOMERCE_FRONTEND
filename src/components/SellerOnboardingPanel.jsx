@@ -8,6 +8,7 @@ import {
   renovarSuscripcion,
 } from '../services/sellerService.js';
 import { refreshSession, sincronizarVendedorDesdeSolicitud } from '../services/authService.js';
+import { registrarSolicitudAprobada } from '../services/analyticsService.js';
 import { FORMATOS_LEGALES_VENDEDOR } from '../data/marketplaceContent.js';
 import { createProducto } from '../services/productService.js';
 import { findUsuarioByIdentity } from '../services/userService.js';
@@ -573,6 +574,7 @@ export function SellerOnboardingPanel() {
     setLoading(true);
     try {
       const actualizada = await validarSolicitud(solicitudId, payload);
+      await registrarSolicitudAprobada(actualizada);
       const estadoMostrar = estadoDesdeSolicitud(actualizada) ?? 'desconocido';
       aplicarSolicitudEnFormulario({ ...actualizada });
       setValidacionOk(`Validacion completada. Estado actual: ${estadoMostrar}.`);
