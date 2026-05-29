@@ -55,6 +55,10 @@ jobs:
           export VITE_ANALYTICS_URL="${VITE_ANALYTICS_URL:-${VITE_API_URL%/}/analytics}"
           npm ci
           npm run build
+          test -f dist/assets/brand/kl-ecommerce-logo.png || (echo "::error::Falta logo en dist/assets/brand" && exit 1)
+          test -f dist/assets/brand/favicon-32x32.png || (echo "::error::Falta favicon en dist/assets/brand" && exit 1)
+          test -f dist/assets/brand/favicon.svg || (echo "::error::Falta favicon.svg en dist/assets/brand" && exit 1)
+          ls -la dist/assets/brand/
 
       - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
